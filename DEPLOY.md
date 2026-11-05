@@ -2,7 +2,14 @@
 
 > 久伴是**纯静态网页**，不需要后端、不需要构建。部署到 GitHub Pages 只需要把文件推到 GitHub 仓库，然后在仓库设置里开启 Pages 即可。
 
-> ⚠️ 当前电脑上**没有配置 GitHub 账号/令牌**，所以项目已经准备好本地 git 仓库和首次提交，但**还没有推送到 GitHub**。请按下面步骤完成最后一步（约 2 分钟）。
+## 部署状态（已完成）
+
+- **在线地址**：<https://2476104263-afk.github.io/jiuban/>
+- **GitHub 仓库**：<https://github.com/2476104263-afk/jiuban>
+- **部署方式**：GitHub Pages，Source = `Deploy from a branch`，分支 `main`，目录 `/ (root)`
+- **当前状态**：已发布（built），页面自动使用 HTTPS
+
+以下内容保留给后续维护和重新部署时参考。
 
 ---
 

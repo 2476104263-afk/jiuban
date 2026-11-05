@@ -7,5 +7,10 @@
   "scripts": {
     "start": "node serve.mjs",
     "start:local": "HOST=127.0.0.1 node serve.mjs"
+  },
+  "homepage": "https://2476104263-afk.github.io/jiuban/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2476104263-afk/jiuban.git"
   }
 }

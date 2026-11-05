@@ -4,6 +4,9 @@
 >
 > 纯前端、零依赖、无需构建。所有数据都保存在你自己的浏览器里。
 
+- 🌐 **在线使用**：<https://2476104263-afk.github.io/jiuban/>
+- 📦 **源码仓库**：<https://github.com/2476104263-afk/jiuban>
+
 ![久伴图标](docs/icon.png)
 
 ![聊天界面](docs/screenshot-chat.png)
@@ -81,6 +84,12 @@ python3 -m http.server 5188 --bind 0.0.0.0
 ### 方式三：任意静态服务器
 
 Nginx、`npx serve`、VS Code Live Server 等均可，只要把项目根目录作为站点根目录。
+
+### 在线版
+
+已部署到 GitHub Pages：<https://2476104263-afk.github.io/jiuban/>
+
+打开后点击右上角「未连接」填入自己的 DeepSeek API Key 即可使用。
 
 ---
 
