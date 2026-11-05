@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="久伴">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="120" y2="122" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4facfe"/>
+      <stop offset="0.55" stop-color="#4f7cff"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="bubble" x1="32" y1="24" x2="96" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e9f2ff"/>
+    </linearGradient>
+    <linearGradient id="heart" x1="48" y1="38" x2="82" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f7cff"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#bg)"/>
+  <circle cx="26" cy="20" r="42" fill="#ffffff" opacity="0.13"/>
+  <circle cx="112" cy="114" r="38" fill="#ffffff" opacity="0.08"/>
+  <rect x="24" y="22" width="80" height="64" rx="20" fill="url(#bubble)"/>
+  <path d="M46 84v14l18-14z" fill="url(#bubble)"/>
+  <path d="M64 68C64 68 46 57.5 46 46.5 46 40.6 50.7 36 56.4 36 60.1 36 63 38.1 64 41 65 38.1 67.9 36 71.6 36 77.3 36 82 40.6 82 46.5 82 57.5 64 68 64 68Z" fill="url(#heart)"/>
+  <circle cx="99" cy="35" r="8" fill="#ffffff" opacity="0.9"/>
+  <circle cx="99" cy="35" r="3.4" fill="#8b5cf6"/>
+</svg>

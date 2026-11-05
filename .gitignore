@@ -1,0 +1,8 @@
+# 本地测试 / 验收脚本与截图，不部署到 GitHub Pages
+.qa/
+# macOS
+.DS_Store
+# 依赖与日志
+node_modules/
+*.log
+dist/

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>久伴 · 在线聊天</title>
+    <meta
+      name="description"
+      content="久伴是一个桌面端聊天应用：支持 DeepSeek 大模型、插件扩展以及 API Key 接入。"
+    />
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/jiuban.svg?v=1.6.0" />
+    <link rel="apple-touch-icon" href="./assets/icons/jiuban.svg?v=1.6.0" />
+    <link rel="stylesheet" href="./assets/css/tokens.css?v=1.6.0" />
+    <link rel="stylesheet" href="./assets/css/layout.css?v=1.6.0" />
+    <link rel="stylesheet" href="./assets/css/chat.css?v=1.6.0" />
+    <link rel="stylesheet" href="./assets/css/api-key.css?v=1.6.0" />
+    <link rel="stylesheet" href="./assets/css/settings.css?v=1.6.0" />
+    <link rel="stylesheet" href="./assets/css/plugins.css?v=1.6.0" />
+  </head>
+  <body>
+    <!-- 桌面壁纸 -->
+    <div class="wallpaper" aria-hidden="true">
+      <span class="wallpaper-blob blob-a"></span>
+      <span class="wallpaper-blob blob-b"></span>
+      <span class="wallpaper-blob blob-c"></span>
+      <span class="wallpaper-grid"></span>
+      <div class="wallpaper-brand">
+        <img class="brand-mark" src="./assets/icons/jiuban.svg?v=1.6.0" alt="久伴" width="34" height="34" />
+        <div>
+          <b>久伴</b>
+          <small>陪着你，慢慢聊</small>
+        </div>
+      </div>
+      <div class="wallpaper-clock" id="wallpaper-clock" aria-hidden="true"></div>
+    </div>
+
+    <!-- 启动失败提示（非模块脚本，file:// 打开或 JS 模块加载失败时显示） -->
+    <div class="boot-warning" id="boot-warning" hidden role="alert">
+      <div class="boot-warning-card">
+        <span class="boot-warning-emoji">🚧</span>
+        <h2>久伴 需要在本地服务器中打开</h2>
+        <p id="boot-warning-text">
+          浏览器出于安全限制，不允许以 <code>file://</code> 方式加载 ES Modules，所以页面无法交互。
+        </p>
+        <pre><code>cd "/Users/linxipan/Desktop/挑杯项目"
+node serve.mjs</code></pre>
+        <p>然后在浏览器打开 <a href="http://127.0.0.1:5188" target="_blank" rel="noopener">http://127.0.0.1:5188</a>。</p>
+        <p class="boot-warning-hint">如果你已经通过 http:// 打开本页，请按 ⌘/Ctrl + Shift + R 强制刷新；仍然不行请打开浏览器控制台（F12）把报错发给开发者。</p>
+      </div>
+    </div>
+
+    <!-- 应用窗口 -->
+    <div class="app-shell" id="app" data-view="chat">
+      <!-- 左侧导航栏 -->
+      <aside class="rail">
+        <div class="rail-top">
+          <button class="rail-avatar" id="me-avatar" title="我 · 本地用户" aria-label="我的资料">
+            <span class="me-letter">我</span>
+            <span class="presence" title="在线"></span>
+          </button>
+          <nav class="rail-nav" aria-label="侧边导航">
+            <button class="rail-btn rail-ai-btn" data-view="chat" data-tip="和久伴聊天" aria-label="和久伴聊天">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+              <span class="rail-ai-badge">AI</span>
+            </button>
+            <button class="rail-btn" data-view="settings" data-tip="设置" aria-label="设置">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+            <button class="rail-btn" id="api-key-btn" data-tip="连接 DeepSeek" aria-label="连接 DeepSeek">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m11 12 9-9"/><path d="m16 5 3 3"/><path d="m19 2 3 3"/></svg>
+            </button>
+          </nav>
+        </div>
+      </aside>
+
+
+      <!-- 主区域 -->
+      <main class="main-pane" id="main-pane">
+        <!-- 聊天视图 -->
+        <div class="chat-view" id="chat-root">
+          <header class="chat-head">
+            <div class="chat-head-info">
+              <div class="avatar avatar-md" id="chat-avatar">💙</div>
+              <div class="chat-head-text">
+                <div class="chat-title-row">
+                  <h1 class="chat-title" id="chat-title">久伴</h1>
+                </div>
+                <div class="chat-sub" id="chat-sub">在线 · 只陪你一个人</div>
+              </div>
+            </div>
+            <div class="chat-head-actions">
+              <button class="api-chip" id="chat-api-status" title="连接 DeepSeek">
+                <span class="status-dot"></span>
+                <span class="api-chip-text">未连接</span>
+              </button>
+              <button class="btn-icon" id="chat-export-btn" title="导出当前对话">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              </button>
+              <button class="btn-icon" id="chat-clear-btn" title="清空聊天记录">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </header>
+
+          <div class="messages scroll-y" id="messages" aria-live="polite"></div>
+
+          <button class="scroll-bottom" id="scroll-bottom" hidden title="回到底部">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+          </button>
+
+          <footer class="composer" id="composer">
+            <div class="composer-tools">
+              <button class="tool-btn" data-tool="emoji" title="表情">😊</button>
+              <button class="tool-btn" data-tool="image" title="发送图片">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L7 20"/></svg>
+              </button>
+              <span class="composer-sep"></span>
+              <span class="composer-hint" id="composer-hint">Enter 发送 · Shift+Enter 换行</span>
+            </div>
+            <div class="composer-input-row">
+              <textarea id="composer-input" rows="1" placeholder="和久伴说点什么…" autocomplete="off"></textarea>
+              <button class="send-btn" id="send-btn" title="发送 (Enter)">
+                <span class="send-label">发送</span>
+                <kbd>S</kbd>
+              </button>
+            </div>
+            <div class="emoji-popover" id="emoji-popover" hidden></div>
+            <input type="file" id="image-input" accept="image/*" hidden />
+          </footer>
+        </div>
+
+        <!-- 设置页面挂载点 -->
+        <div class="view-root" id="view-root" hidden></div>
+      </main>
+
+    </div>
+
+
+
+    <div class="toast-root" id="toast-root" aria-live="assertive"></div>
+    <div class="modal-root" id="modal-root"></div>
+
+    <noscript>
+      <div style="position: fixed; inset: 0; display: grid; place-items: center; background: #fff; color: #333">
+        需要启用 JavaScript 才能使用 久伴。
+      </div>
+    </noscript>
+    <script>
+      (function () {
+        function showWarning(message) {
+          var node = document.getElementById('boot-warning');
+          if (!node) return;
+          var text = document.getElementById('boot-warning-text');
+          if (text && message) text.textContent = message;
+          node.hidden = false;
+        }
+        window.__JiubanBootWarning = showWarning;
+
+        window.addEventListener(
+          'error',
+          function (event) {
+            var target = event.target;
+            if (target && target.tagName === 'SCRIPT' && location.protocol !== 'file:') {
+              showWarning(
+                'JavaScript 模块加载失败。请确认通过本地服务器打开项目（node serve.mjs），而不是直接双击 index.html。'
+              );
+            }
+          },
+          true
+        );
+
+        if (location.protocol === 'file:') {
+          showWarning(
+            '当前是用 file:// 方式直接打开了 index.html，浏览器会拦截 ES Modules，页面无法交互。请运行 node serve.mjs 后访问 http://127.0.0.1:5188。'
+          );
+        }
+
+        // 2.5 秒后仍未初始化成功（且不是 file://）时给出排查提示
+        setTimeout(function () {
+          if (!window.__JIUBAN_READY__ && location.protocol !== 'file:') {
+            showWarning(
+              '久伴 初始化时间过长或脚本加载失败。请按 ⌘/Ctrl + Shift + R 强制刷新；仍然不行请打开浏览器控制台（F12）查看报错。'
+            );
+          }
+        }, 4000);
+      })();
+    </script>
+    <script type="module" src="./assets/js/app.js?v=1.6.0"></script>
+  </body>
+</html>
