@@ -1,6 +1,6 @@
 /* ==========================================================================
    jiuban · 应用入口
-   启动、视图路由（聊天 / 设置）、DeepSeek 连接小窗口、壁纸时钟
+   启动、视图路由（聊天 / 设置 / 记忆 / 日记）、DeepSeek 连接小窗口
    ========================================================================== */
 
 import { $, $$, el, toast } from './util.js';
@@ -183,15 +183,13 @@ function init() {
   window.__JIUBAN_READY__ = true;
   const bootWarning = document.getElementById('boot-warning');
   if (bootWarning) bootWarning.hidden = true;
-  console.info('[久伴] v1.6.0 · 若点击无响应，请强制刷新 ⌘/Ctrl+Shift+R');
+  console.info('[久伴] v1.7.0 · 若点击无响应，请强制刷新 ⌘/Ctrl+Shift+R');
   // 只保留浅色外观
   document.documentElement.dataset.theme = 'light';
   document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'light');
   initRouting();
   initUserProfile(() => chatModule?.refreshChat?.());
   initGlobalGuards();
-  tickClock();
-  setInterval(tickClock, 20000);
   route(viewFromHash(), { force: true });
 }
 

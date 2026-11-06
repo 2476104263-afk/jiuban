@@ -1,16 +1,66 @@
 {
   "name": "jiuban",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "description": "久伴 · 桌面端聊天网页应用（DeepSeek + 插件扩展）",
   "scripts": {
     "start": "node serve.mjs",
-    "start:local": "HOST=127.0.0.1 node serve.mjs"
+    "start:local": "HOST=127.0.0.1 node serve.mjs",
+    "desktop": "electron .",
+    "dist:win": "electron-builder --win nsis --x64",
+    "dist:mac": "electron-builder --mac dmg --arm64"
+  },
+  "main": "desktop/main.cjs",
+  "build": {
+    "appId": "com.jiuban.desktop",
+    "productName": "久伴",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "index.html",
+      "assets/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "久伴-Setup-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "久伴-${version}-mac-${arch}.${ext}"
+    }
   },
   "homepage": "https://2476104263-afk.github.io/jiuban/",
   "repository": {
     "type": "git",
     "url": "https://github.com/2476104263-afk/jiuban.git"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
   }
 }

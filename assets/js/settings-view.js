@@ -9,7 +9,7 @@ import { pluginManager } from './plugins.js';
 import { openApiKeyDialog } from './api-key-dialog.js';
 import { openCustomPluginDialog } from './plugin-editor.js';
 
-const APP_VERSION = 'v1.6.0';
+const APP_VERSION = 'v1.7.0';
 const CONFIG_FILE = 'jiuban-plugins.json';
 
 function iconSpan(name, size = 16, className = 'settings-icon') {

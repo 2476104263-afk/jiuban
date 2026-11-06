@@ -1,171 +1,181 @@
 # 部署到 GitHub Pages
 
-> 久伴是**纯静态网页**，不需要后端、不需要构建。部署到 GitHub Pages 只需要把文件推到 GitHub 仓库，然后在仓库设置里开启 Pages 即可。
+> 久伴的网页端是**纯静态站点**：原生 HTML + CSS + ES Modules，不需要后端、不需要构建。只要把仓库根目录的文件推到 GitHub，GitHub Pages 就会自动发布。
 
 ## 部署状态（已完成）
 
-- **在线地址**：<https://2476104263-afk.github.io/jiuban/>
-- **GitHub 仓库**：<https://github.com/2476104263-afk/jiuban>
-- **部署方式**：GitHub Pages，Source = `Deploy from a branch`，分支 `main`，目录 `/ (root)`
-- **当前状态**：已发布（built），页面自动使用 HTTPS
-
-以下内容保留给后续维护和重新部署时参考。
-
----
-
-## 一、前置条件
-
-- 一个 GitHub 账号（免费账号即可）
-- 仓库建议设为 **Public**（私有仓库使用 Pages 需要 GitHub Pro）
-- 本机已有 git（macOS 自带）
+| 项目 | 内容 |
+| --- | --- |
+| **在线地址** | <https://2476104263-afk.github.io/jiuban/> |
+| **GitHub 仓库** | <https://github.com/2476104263-afk/jiuban> |
+| **部署方式** | GitHub Pages → Source = `Deploy from a branch` → 分支 `main` → 目录 `/ (root)` |
+| **当前版本** | v1.7.0（2026-11-07 发布） |
+| **HTTPS** | 自动开启（`github.io` 域名默认 HTTPS） |
+| **发布触发** | 推送到 `main` 后自动重新构建，通常 1～2 分钟生效 |
 
 ---
 
-## 二、创建仓库并推送（二选一）
+## 一、访问方式
 
-### 方式 A：使用 GitHub CLI（推荐，最省事）
+### 1. 在线地址
 
-```bash
-# 安装 gh（只需一次）
-brew install gh
-
-# 登录 GitHub（按提示在浏览器里授权）
-gh auth login
-
-# 在项目目录创建仓库并推送（把 jiuban 换成你想要的仓库名）
-cd "/Users/linxipan/Desktop/挑杯项目"
-gh repo create jiuban --public --source=. --remote=origin --push
-```
-
-### 方式 B：手动在网页创建仓库
-
-1. 打开 <https://github.com/new>
-2. 填写仓库名，例如 `jiuban`，选择 **Public**；
-3. **不要**勾选 “Add a README file / .gitignore / license”；
-4. 点击 Create repository；
-5. 回到项目目录执行：
-
-```bash
-cd "/Users/linxipan/Desktop/挑杯项目"
-./deploy-github.sh https://github.com/你的用户名/jiuban.git
-```
-
-脚本会自动提交最新改动、设置 `origin` 并推送到 `main`。
-
-> 首次推送会要求登录 GitHub：HTTPS 方式请使用 **Personal Access Token** 作为密码；SSH 方式需要先配置 SSH key。也可以先用 `gh auth login` 登录后再推送。
-
----
-
-## 三、开启 GitHub Pages
-
-1. 打开 GitHub 仓库页面 → **Settings** → 左侧 **Pages**；
-2. **Source** 选择 **Deploy from a branch**；
-3. **Branch** 选择 **main**，目录选择 **/ (root)**；
-4. 点击 **Save**；
-5. 等待 1～2 分钟，页面顶部会出现站点地址。
-
-不要选择 “GitHub Actions” 作为 Source（本项目不需要构建流程）。
-
----
-
-## 四、访问地址
-
-### 项目站点（仓库名不是 `用户名.github.io` 时）
+浏览器打开：
 
 ```text
-https://你的GitHub用户名.github.io/仓库名/
+https://2476104263-afk.github.io/jiuban/
 ```
 
-例如：
+手机、平板、任何电脑都可以直接访问，不需要安装；页面是相对路径，也支持被部署到任意子路径。
 
-```text
-https://linxipan.github.io/jiuban/
-```
+### 2. 首次使用
 
-### 用户主页站点（仓库名必须是 `用户名.github.io`）
+1. 打开页面，右上角显示「未连接」；
+2. 点击「未连接」或左下角钥匙按钮，粘贴自己的 DeepSeek API Key；
+3. 点小刷新按钮测试连通，保存后即可真实对话；不填 Key 也能先用「演示模式」。
 
-```text
-https://你的GitHub用户名.github.io/
-```
+> API Key 只保存在**访客自己浏览器**的 localStorage 里，不会上传到仓库，也不会经过本站服务器（本站没有服务器）。
 
-> 本项目所有路径都是相对路径，部署在 `/仓库名/` 子路径下也能正常工作（已实测）。
-> 打开页面后，各自点击右上角「未连接 / 已连接」填入自己的 DeepSeek API Key 即可使用。
+### 3. 如果地址打不开
+
+- 确认仓库 Settings → Pages 中 Source 为 `Deploy from a branch`、分支 `main`、目录 `/ (root)`；
+- 等待 1～2 分钟后强制刷新（⌘/Ctrl + Shift + R）；
+- 仓库页面 → **Actions** → 查看 `pages build and deployment` 是否成功。
 
 ---
 
-## 五、后续维护方式
+## 二、日常维护：改完内容后怎么发布
 
-### 修改内容
-
-直接编辑项目里的文件，然后：
+### 一键发布（推荐）
 
 ```bash
-cd "/Users/linxipan/Desktop/挑杯项目"
+cd "/Users/linxipan/Desktop/Memora"
 ./deploy-github.sh
 ```
 
-或手动执行：
+脚本会：提交所有改动 → 推送到 `main` → GitHub Pages 自动重新发布。
+
+### 手动发布
 
 ```bash
+cd "/Users/linxipan/Desktop/Memora"
 git add -A
 git commit -m "更新说明"
 git push
 ```
 
-推送到 `main` 后，GitHub Pages 会自动重新发布，通常 **1～2 分钟**生效。
+### 发布后验证是否生效
 
-### 如果更新后页面没变化
+1. 等 1～2 分钟，浏览器打开线上地址并按 **⌘/Ctrl + Shift + R** 强制刷新；
+2. 打开「设置」→ 底部「关于」应显示 `久伴 v1.7.0`；
+3. 按 F12 打开控制台，应看到 `[久伴] v1.7.0 · …`，且没有红色报错。
 
-GitHub Pages 会缓存静态资源，而久伴的 CSS/JS 带版本参数。修改样式或脚本后，建议递增版本号：
+也可以直接检查线上 HTML 的版本号：
 
-把 `1.6.0` 替换成新版本（例如 `1.6.1`），涉及：
+```bash
+curl -s https://2476104263-afk.github.io/jiuban/ | grep -o 'v=[0-9.]*' | sort -u
+```
 
-- `index.html`（所有 `?v=1.6.0`）
-- `assets/js/app.js`（`ASSET_VERSION`）
-- `assets/js/chat.js`（动态 import 的 `?v=`）
-- `assets/js/settings-view.js`（`APP_VERSION` 与动态 import 的 `?v=`）
-- `README.md`、`package.json`（版本描述，可选）
+### 修改 JS / CSS 后：升级缓存版本号
 
-然后提交推送，并在浏览器按 **⌘/Ctrl + Shift + R** 强制刷新。
+GitHub Pages 会缓存静态资源，浏览器也会缓存。修改 `assets/` 下的样式或脚本后，需要让 URL 变化才能让所有人拿到新文件：
+
+- `index.html` 里各 `<link>` / `<script>` 的 `?v=…`；
+- `assets/js/app.js` 顶部的 `ASSET_VERSION`（聊天、设置、记忆、日记等页面模块都通过它动态 import）；
+- `assets/js/chat.js` 里少数 `?v=…` 的动态 import。
+
+把当前版本号统一改成新值（例如 `1.9.8` → `1.9.9`），提交推送后强刷即可。
+
+> 本次部署已经修复了 `assets/js/app.js` 中一个会导致「页面打开后聊天不加载」的启动报错（`tickClock is not defined`），并把界面显示的版本号统一为 v1.7.0。
 
 ### 查看发布状态
 
-- 仓库 **Actions** 或 **Settings → Pages** 可以查看部署状态；
-- 地址打不开时先确认 Pages 的 Branch 是否为 `main`、目录是否为 `/ (root)`；
-- 也可以等待几分钟后再试。
+- 仓库 **Actions** → `pages build and deployment`：最近一次构建是否成功；
+- 仓库 **Settings → Pages**：顶部会显示站点地址和最近部署时间；
+- 发布失败时点进 Actions 看日志，修好再推一次即可。
 
 ### 回滚到旧版本
 
 ```bash
-git log --oneline          # 找到要回滚的提交
-git revert <提交id>        # 生成一个反向提交
-git push                   # Pages 会自动重新发布
+git log --oneline          # 找到要回到的提交
+git revert <提交id>        # 生成一个反向提交（保留历史，更安全）
+git push                   # Pages 自动重新发布
 ```
 
 ### 本地预览（可选）
 
-GitHub Pages 不需要 `serve.mjs`，但本地开发仍可用：
-
 ```bash
-node serve.mjs
+cd "/Users/linxipan/Desktop/Memora"
+node serve.mjs             # 打开 http://127.0.0.1:5188
 ```
 
----
-
-## 六、注意事项
-
-- **不要把 API Key 写进代码**：本项目默认不带任何 Key，访客在浏览器里自己填写；Key 只保存在访客自己的 localStorage。
-- **仓库是公开的**：GitHub Pages 会公开仓库内的所有文件（`.qa` 测试目录已通过 `.gitignore` 排除，不会上传）。
-- **没有登录/权限控制**：任何拿到网址的人都可以打开页面并使用自己的 Key，这是纯静态应用的正常边界。
-- DeepSeek 官方接口已确认允许来自 `github.io` 域名的浏览器跨域请求；如果使用第三方代理，需要代理支持 CORS。
-- 自定义域名：可以在 **Settings → Pages → Custom domain** 中绑定，并配置 DNS 与 HTTPS。
-- 页面使用相对路径，支持仓库子路径部署；也支持直接作为用户主页站点根目录部署。
+本地服务器默认禁用缓存，改完刷新即可看到效果。
 
 ---
 
-## 七、当前项目已为你准备好的内容
+## 三、哪些文件会被公开 / 不会被上传
 
-- `.gitignore`：排除 `.qa`、`.DS_Store`、日志、`node_modules`，避免把测试截图传到 GitHub；
-- `.nojekyll`：关闭 Jekyll 处理，确保所有静态资源原样发布；
-- `deploy-github.sh`：一键提交并推送；
-- 本地 git 仓库已初始化并完成首次提交（等待推送到 GitHub）。
+- **会发布**：`index.html`、`assets/**`、`docs/**`、`README.md` 等仓库根目录下的所有文件；
+- **不会发布**：`.qa/`（本地验收脚本与截图）、`node_modules/`、`release/`（桌面端打包产物，单文件可能超过 GitHub 100MB 限制）——均已写入 `.gitignore`；
+- `.nojekyll` 让 GitHub Pages 关闭 Jekyll 处理，静态资源原样发布；
+- 仓库是 **Public**，Pages 上的内容对所有人可见；项目不含任何 API Key，访客各自填自己的 Key。
+
+---
+
+## 四、常见问题
+
+**Q：推送后页面没变化？**
+1. 先确认 Actions 里 Pages 构建成功；
+2. 再等 1～2 分钟并 **⌘/Ctrl + Shift + R** 强刷；
+3. 改了 JS/CSS 却没升级 `?v=` 版本号时，旧缓存可能仍在，按上文升级版本号。
+
+**Q：`git push` 卡住 / 连接 github.com 超时？**
+本机访问 GitHub 可能需要代理（当前系统代理为 `127.0.0.1:12000`，GitHub Pages 与 API 可直连，但 `github.com` 推送可能超时）。给推送临时挂代理：
+
+```bash
+cd "/Users/linxipan/Desktop/Memora"
+HTTPS_PROXY=http://127.0.0.1:12000 ./deploy-github.sh
+# 或手动：
+HTTPS_PROXY=http://127.0.0.1:12000 git push
+```
+
+代理端口以自己代理软件的实际设置为准。
+
+**Q：推送要求登录 / 认证失败？**
+HTTPS 方式使用 GitHub **Personal Access Token** 作为密码（不要用账号密码）；本机凭据已保存在 macOS 钥匙串，正常情况下无需重复输入。也可以用 `gh auth login` 登录后再推。
+
+**Q：想绑定自己的域名？**
+仓库 **Settings → Pages → Custom domain** 填入域名，按提示配置 DNS（CNAME 指向 `2476104263-afk.github.io`），保存后勾选 Enforce HTTPS。
+
+**Q：桌面端安装包怎么发？**
+网页端不需要构建；Windows 安装包由 `.github/workflows/build-windows.yml` 生成：在 GitHub **Actions → Build Windows installer → Run workflow** 手动运行，或推送 `v*` 标签自动构建，产物在对应 Run 的 Artifacts 里下载（不会提交进仓库）。
+
+---
+
+## 五、从零部署到新账号 / 新仓库（备用）
+
+1. 在 GitHub 新建一个 **Public** 仓库（不要勾选初始化 README）；
+2. 在项目目录执行：
+
+```bash
+cd "/Users/linxipan/Desktop/Memora"
+./deploy-github.sh https://github.com/<你的用户名>/<仓库名>.git
+```
+
+3. 仓库 **Settings → Pages**：Source 选 `Deploy from a branch`，Branch 选 `main`，目录选 `/ (root)`，Save；
+4. 1～2 分钟后访问：
+
+```text
+https://<你的用户名>.github.io/<仓库名>/
+```
+
+> 仓库名如果正好是 `<你的用户名>.github.io`，则站点根地址就是 `https://<你的用户名>.github.io/`。
+
+---
+
+## 六、本次发布记录
+
+- **2026-11-07**：发布 v1.7.0 网页端（长期记忆 / 记忆日记 / 个人资料 / 新界面）；
+  - 修复 `assets/js/app.js` 启动时调用已删除的 `tickClock()` 导致聊天模块不加载的问题；
+  - 同步版本号：`package.json` v1.7.0、设置页「关于」v1.7.0；
+  - 忽略 `release/` 桌面端打包产物，避免误传大文件；
+  - 仓库补充 `desktop/`、`.github/workflows/`、`package-lock.json`，用于桌面端与 Windows 安装包构建。

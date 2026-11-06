@@ -6,3 +6,5 @@
 node_modules/
 *.log
 dist/
+# 桌面端打包产物（体积大，仅本地生成，不提交）
+release/
