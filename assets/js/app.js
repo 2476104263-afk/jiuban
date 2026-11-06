@@ -4,12 +4,15 @@
    ========================================================================== */
 
 import { $, $$, el, toast } from './util.js';
+import { initUserProfile } from './user-profile.js?v=1.9.4';
 
-const VIEWS = new Set(['chat', 'settings']);
-const ASSET_VERSION = '1.6.0';
+const VIEWS = new Set(['chat', 'settings', 'memory', 'diary']);
+const ASSET_VERSION = '1.9.8';
 
 const PAGE_MODULES = {
   settings: { path: './settings-view.js', mount: 'mountSettingsView' },
+  memory: { path: './memory-view.js', mount: 'mountMemoryView' },
+  diary: { path: './diary-view.js', mount: 'mountDiaryView' },
 };
 
 const app = $('#app');
@@ -156,22 +159,6 @@ function initRouting() {
   });
   window.addEventListener('hashchange', () => route(viewFromHash(), { force: true }));
   $('#chat-api-status')?.addEventListener('click', openApiKeyWindow);
-  $('#api-key-btn')?.addEventListener('click', openApiKeyWindow);
-}
-
-/* --------------------------------------------------------------------------
-   壁纸时钟
-   -------------------------------------------------------------------------- */
-function tickClock() {
-  const node = $('#wallpaper-clock');
-  if (!node) return;
-  const now = new Date();
-  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][now.getDay()];
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  node.innerHTML = `<span class="clock-time">${hh}:${mm}</span><span class="clock-date">${
-    now.getMonth() + 1
-  }月${now.getDate()}日 ${week}</span>`;
 }
 
 /* --------------------------------------------------------------------------
@@ -201,6 +188,7 @@ function init() {
   document.documentElement.dataset.theme = 'light';
   document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'light');
   initRouting();
+  initUserProfile(() => chatModule?.refreshChat?.());
   initGlobalGuards();
   tickClock();
   setInterval(tickClock, 20000);

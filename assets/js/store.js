@@ -20,6 +20,9 @@ export const DEFAULT_SETTINGS = {
   showReasoning: true,
   enterToSend: true,
   theme: 'light',
+  languageStyle: 'natural',
+  languageStyleCustom: '',
+  personalityPrompt: '',
 };
 
 const listeners = new Map();
@@ -53,6 +56,10 @@ function normalizeSettings(raw) {
   base.model = String(base.model || DEFAULT_SETTINGS.model);
   base.apiKey = typeof base.apiKey === 'string' ? base.apiKey.trim() : '';
   base.theme = 'light'; // 深色模式已移除
+  const languageStyles = new Set(['natural', 'concise', 'warm', 'professional', 'casual', 'academic', 'custom']);
+  base.languageStyle = languageStyles.has(String(base.languageStyle)) ? String(base.languageStyle) : DEFAULT_SETTINGS.languageStyle;
+  base.languageStyleCustom = String(base.languageStyleCustom || '').slice(0, 500);
+  base.personalityPrompt = String(base.personalityPrompt || '').slice(0, 2000);
   base.stream = Boolean(base.stream);
   base.showReasoning = base.showReasoning !== false;
   base.enterToSend = base.enterToSend !== false;

@@ -15,9 +15,13 @@
   justify-content: space-between;
   gap: 12px;
   min-height: var(--header-h);
-  padding: 8px 20px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
+  width: min(var(--feature-content-max), calc(100% - var(--feature-content-gutter) - var(--feature-content-gutter)));
+  margin: 12px auto 0 var(--feature-content-gutter);
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-xs);
 }
 
 .chat-head-info {
@@ -96,6 +100,61 @@
   height: 6px;
 }
 
+/* Siri 风格的思考光环：只围绕助手头像播放，头像本身保持清晰。 */
+.chat-head .chat-avatar.is-thinking {
+  position: relative;
+  isolation: isolate;
+  animation: assistant-breathe 2.4s ease-in-out infinite;
+}
+
+.chat-head .chat-avatar.is-thinking::before,
+.chat-head .chat-avatar.is-thinking::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+.chat-head .chat-avatar.is-thinking::before {
+  inset: -4px;
+  padding: 2px;
+  background: conic-gradient(from 0deg, #55c9ff, #8c78ff, #f18ee8, #56e3d0, #55c9ff);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: assistant-orbit 3.2s linear infinite;
+}
+
+.chat-head .chat-avatar.is-thinking::after {
+  inset: -7px;
+  border: 1px solid rgba(75, 174, 255, 0.25);
+  animation: assistant-ripple 2.4s ease-out infinite;
+}
+
+@keyframes assistant-orbit {
+  to { transform: rotate(1turn); }
+}
+
+@keyframes assistant-breathe {
+  50% { box-shadow: 0 0 16px rgba(88, 157, 255, 0.32); }
+}
+
+@keyframes assistant-ripple {
+  0%, 100% { opacity: 0.6; transform: scale(0.96); }
+  70% { opacity: 0; transform: scale(1.18); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-head .chat-avatar.is-thinking,
+  .chat-head .chat-avatar.is-thinking::before,
+  .chat-head .chat-avatar.is-thinking::after {
+    animation: none;
+  }
+  .chat-head .chat-avatar.is-thinking::before { opacity: 0.75; }
+  .chat-head .chat-avatar.is-thinking::after { opacity: 0; }
+}
+
 /* --------------------------------------------------------------------------
    消息区
    -------------------------------------------------------------------------- */
@@ -103,7 +162,7 @@
   position: relative;
   flex: 1;
   min-height: 0;
-  padding: 16px 22px 8px;
+  padding: 16px var(--feature-content-gutter) 8px;
   overflow-y: auto;
   scroll-behavior: smooth;
   background:
@@ -115,6 +174,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  max-width: var(--feature-content-max);
   margin-bottom: 14px;
   animation: msg-in 0.2s var(--ease-out);
 }
@@ -160,14 +220,14 @@
   color: var(--bubble-in-text);
   background: var(--bubble-in-bg);
   border: 1px solid var(--bubble-in-border);
-  border-top-left-radius: 4px;
+  border-top-left-radius: 9px;
   box-shadow: var(--shadow-xs);
 }
 
 .bubble-out {
   color: var(--bubble-out-text);
   background: var(--bubble-out-bg);
-  border-top-right-radius: 4px;
+  border-top-right-radius: 9px;
   box-shadow: 0 3px 10px rgba(0, 136, 240, 0.24);
 }
 
@@ -719,7 +779,7 @@
   margin: 0 18px 6px;
   padding: 6px 10px;
   border: 1px solid rgba(245, 158, 11, 0.24);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--warning-soft);
   color: var(--text-2);
   font-size: 11.5px;
@@ -745,21 +805,26 @@
 .composer {
   position: relative;
   flex: none;
-  padding: 8px 18px 14px;
-  background: var(--bg-panel);
-  border-top: 1px solid var(--border);
-  transition: box-shadow var(--dur) var(--ease);
+  padding: 10px var(--feature-content-gutter) 20px;
+  background: transparent;
 }
 
 .composer.is-dragover {
-  box-shadow: inset 0 0 0 2px var(--accent);
+  box-shadow: none;
+}
+
+.composer.is-dragover .composer-input-row {
+  border-color: var(--accent);
+  background: var(--accent-softer);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 .composer-tools {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-bottom: 4px;
+  max-width: var(--feature-content-max);
+  margin: 0 0 6px 6px;
 }
 
 .tool-btn {
@@ -799,24 +864,27 @@
 .composer-input-row {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  padding: 7px 7px 7px 12px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: var(--bg-input);
+  gap: 12px;
+  max-width: var(--feature-content-max);
+  min-height: 58px;
+  padding: 9px 9px 9px 17px;
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  background: var(--bg-panel);
+  box-shadow: 0 8px 24px rgba(26, 48, 86, 0.09), 0 2px 6px rgba(26, 48, 86, 0.04);
   transition: border-color var(--dur), background var(--dur), box-shadow var(--dur);
 }
 
 .composer-input-row:focus-within {
-  background: var(--bg-input-focus);
+  background: var(--bg-panel);
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-ring);
+  box-shadow: 0 0 0 3px var(--accent-ring), 0 10px 28px rgba(26, 48, 86, 0.12);
 }
 
 #composer-input {
   flex: 1;
   min-width: 0;
-  min-height: 32px;
+  min-height: 36px;
   max-height: 150px;
   padding: 5px 0;
   border: 0;
@@ -838,9 +906,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 14px;
-  border-radius: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #19a4ff, #0088f0);
   color: #fff;
   font-size: 12.5px;
@@ -963,7 +1031,7 @@
 .scroll-bottom {
   position: absolute;
   right: 24px;
-  bottom: 118px;
+  bottom: 136px;
   z-index: 20;
   display: grid;
   place-items: center;
@@ -1083,7 +1151,7 @@
   }
 
   .messages {
-    padding: 14px 14px 6px;
+    padding: 14px var(--feature-content-gutter) 6px;
   }
 
   .msg-body {
@@ -1091,7 +1159,7 @@
   }
 
   .composer {
-    padding: 8px 12px 12px;
+    padding: 8px var(--feature-content-gutter) 14px;
   }
 }
 
@@ -1103,7 +1171,9 @@
 
 @media (max-width: 640px) {
   .chat-head {
-    padding: 6px 10px;
+    width: calc(100% - 16px);
+    margin: 8px auto 0;
+    padding: 8px 10px;
     gap: 6px;
   }
 
@@ -1120,7 +1190,7 @@
   }
 
   .messages {
-    padding: 10px 10px 4px;
+    padding: 10px var(--feature-content-gutter) 4px;
   }
 
   .demo-banner {
@@ -1136,6 +1206,23 @@
     display: none;
   }
 
+  .composer {
+    padding: 6px var(--feature-content-gutter) 12px;
+  }
+
+  .composer-input-row {
+    gap: 8px;
+    min-height: 54px;
+    padding: 7px 7px 7px 13px;
+    border-radius: 16px;
+  }
+
+  .send-btn {
+    height: 36px;
+    padding: 0 13px;
+    border-radius: 11px;
+  }
+
   .emoji-popover {
     left: 8px;
     width: calc(100% - 16px);
@@ -1144,7 +1231,7 @@
 
   .scroll-bottom {
     right: 14px;
-    bottom: 112px;
+    bottom: 120px;
   }
 
   .newchat-grid {

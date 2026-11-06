@@ -1,25 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="久伴">
   <defs>
-    <linearGradient id="bg" x1="8" y1="6" x2="120" y2="122" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4facfe"/>
-      <stop offset="0.55" stop-color="#4f7cff"/>
-      <stop offset="1" stop-color="#8b5cf6"/>
+    <linearGradient id="surface" x1="8" y1="6" x2="120" y2="124" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1b2c4b"/>
+      <stop offset="1" stop-color="#111728"/>
     </linearGradient>
-    <linearGradient id="bubble" x1="32" y1="24" x2="96" y2="88" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#e9f2ff"/>
+    <linearGradient id="orb-a" x1="31" y1="39" x2="97" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60eaff"/>
+      <stop offset=".48" stop-color="#7d9bff"/>
+      <stop offset="1" stop-color="#cf7cff"/>
     </linearGradient>
-    <linearGradient id="heart" x1="48" y1="38" x2="82" y2="66" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4f7cff"/>
-      <stop offset="1" stop-color="#8b5cf6"/>
+    <linearGradient id="orb-b" x1="39" y1="87" x2="91" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78f5d2"/>
+      <stop offset=".5" stop-color="#61caff"/>
+      <stop offset="1" stop-color="#b783ff"/>
     </linearGradient>
+    <radialGradient id="core" cx="0" cy="0" r="1" gradientTransform="matrix(0 38 -38 0 64 60)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity=".96"/>
+      <stop offset=".2" stop-color="#d6fbff" stop-opacity=".88"/>
+      <stop offset=".56" stop-color="#87c8ff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#8e81ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="12" y="11" width="104" height="104" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
   </defs>
-  <rect width="128" height="128" rx="30" fill="url(#bg)"/>
-  <circle cx="26" cy="20" r="42" fill="#ffffff" opacity="0.13"/>
-  <circle cx="112" cy="114" r="38" fill="#ffffff" opacity="0.08"/>
-  <rect x="24" y="22" width="80" height="64" rx="20" fill="url(#bubble)"/>
-  <path d="M46 84v14l18-14z" fill="url(#bubble)"/>
-  <path d="M64 68C64 68 46 57.5 46 46.5 46 40.6 50.7 36 56.4 36 60.1 36 63 38.1 64 41 65 38.1 67.9 36 71.6 36 77.3 36 82 40.6 82 46.5 82 57.5 64 68 64 68Z" fill="url(#heart)"/>
-  <circle cx="99" cy="35" r="8" fill="#ffffff" opacity="0.9"/>
-  <circle cx="99" cy="35" r="3.4" fill="#8b5cf6"/>
+  <rect width="128" height="128" rx="34" fill="url(#surface)"/>
+  <circle cx="64" cy="64" r="32" fill="url(#orb-a)" opacity=".75" filter="url(#glow)"/>
+  <circle cx="64" cy="61" r="33" fill="url(#core)"/>
+  <path d="M33 65c2-15 15-28 31-28s29 13 31 28c-2 14-15 25-31 25S35 79 33 65Z" fill="none" stroke="url(#orb-a)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M43 43c-7 6-11 14-11 22 0 15 14 27 32 27 12 0 22-6 28-14" fill="none" stroke="url(#orb-b)" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+  <circle cx="64" cy="61" r="5" fill="#fff" opacity=".9"/>
 </svg>

@@ -13,9 +13,9 @@
   --accent-soft: rgba(0, 153, 255, 0.1);
   --accent-softer: rgba(0, 153, 255, 0.06);
   --accent-ring: rgba(0, 153, 255, 0.28);
-  --rail-from: #1f6bff;
-  --rail-mid: #0d8bf2;
-  --rail-to: #10c4f0;
+  --rail-from: #3b82f6;
+  --rail-mid: #686ce8;
+  --rail-to: #9a69e8;
 
   /* 语义色 */
   --success: #14b87a;
@@ -103,11 +103,21 @@
   --list-w: 288px;
   --header-h: 60px;
   --titlebar-h: 34px;
+  --feature-content-max: 100%;
+  --feature-content-gutter: 24px;
 
   /* 动效 */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur: 0.18s;
+}
+
+@media (max-width: 820px) {
+  :root { --feature-content-gutter: 16px; }
+}
+
+@media (max-width: 640px) {
+  :root { --feature-content-gutter: 12px; }
 }
 
 /* 深色主题 */
