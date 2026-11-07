@@ -141,7 +141,10 @@ HTTPS_PROXY=http://127.0.0.1:12000 git push
 代理端口以自己代理软件的实际设置为准。
 
 **Q：推送要求登录 / 认证失败？**
-HTTPS 方式使用 GitHub **Personal Access Token** 作为密码（不要用账号密码）；本机凭据已保存在 macOS 钥匙串，正常情况下无需重复输入。也可以用 `gh auth login` 登录后再推。
+HTTPS 方式需要 GitHub 凭据（不要用账号密码）：
+- 在 <https://github.com/settings/tokens> 创建 Personal Access Token（classic），勾选 `repo` + `workflow`，推送时粘贴到 Password 处；
+- 或安装 GitHub CLI 后执行 `gh auth login`。
+本机当前**没有保存长期凭据**（钥匙串写入被系统权限拦截），下次推送仍会要求认证；成功输入一次后，如果系统允许，macOS 会自动把它保存到钥匙串。
 
 **Q：想绑定自己的域名？**
 仓库 **Settings → Pages → Custom domain** 填入域名，按提示配置 DNS（CNAME 指向 `2476104263-afk.github.io`），保存后勾选 Enforce HTTPS。
@@ -178,4 +181,5 @@ https://<你的用户名>.github.io/<仓库名>/
   - 修复 `assets/js/app.js` 启动时调用已删除的 `tickClock()` 导致聊天模块不加载的问题；
   - 同步版本号：`package.json` v1.7.0、设置页「关于」v1.7.0；
   - 忽略 `release/` 桌面端打包产物，避免误传大文件；
-  - 仓库补充 `desktop/`、`.github/workflows/`、`package-lock.json`，用于桌面端与 Windows 安装包构建。
+  - 仓库补充 `desktop/`、`.github/workflows/`、`package-lock.json`，用于桌面端与 Windows 安装包构建；
+  - 本次推送通过 GitHub OAuth 设备授权完成（GitHub CLI 应用，scope：`public_repo` + `workflow`），本地未保存 Token；授权可在 GitHub → **Settings → Applications** 中查看或撤销。
