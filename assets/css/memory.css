@@ -356,6 +356,7 @@
 
 .memory-item-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -376,6 +377,42 @@
 .memory-date {
   color: var(--text-3);
   font-size: 10px;
+}
+
+.memory-state-tag {
+  padding: 3px 7px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.memory-state-tag.is-current {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.memory-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.memory-confirm {
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: var(--radius-full);
+  color: var(--accent-strong);
+  font-size: 10px;
+}
+
+.memory-effective-time {
+  margin-top: 6px;
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 1.45;
 }
 
 .memory-remove {

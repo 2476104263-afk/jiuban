@@ -1,7 +1,7 @@
 import {
-  addManualMemory, clearMemories, COMPANION_MEMORY_SCOPE, deleteMemory, exportMemorySnapshot, getCognitionState, getMemoryStorageStats,
+  addManualMemory, clearMemories, COMPANION_MEMORY_SCOPE, confirmMemory, deleteMemory, exportMemorySnapshot, getCognitionState, getMemoryStorageStats,
   importMemorySnapshot, listMemories, memoryEnabled, rebuildMemoryIndex, setCognitionState, setMemoryEnabled,
-} from './memory.js?v=1.9.8';
+} from './memory.js?v=1.9.9';
 import { createMemoryCloud } from './memory-cloud.js?v=1.9.3';
 import { store } from './store.js';
 import { LANGUAGE_STYLES } from './language-style.js?v=1.9.5';
@@ -38,7 +38,8 @@ export async function mountMemoryView(container) {
 
   function renderList() {
     memoryCloud.update(rows, search.value);
-    countBadge.textContent = String(rows.filter((item) => item.status === 'active').length);
+    const isCurrent = (item) => item.status === 'active' && (!item.validFrom || Number(item.validFrom) <= Date.now()) && (!item.validUntil || Number(item.validUntil) > Date.now());
+    countBadge.textContent = String(rows.filter(isCurrent).length);
     memories.replaceChildren();
     const query = search.value.trim().toLowerCase();
     const visible = rows.filter((row) => !query || `${row.content} ${(row.tags || []).join(' ')}`.toLowerCase().includes(query));
@@ -47,6 +48,7 @@ export async function mountMemoryView(container) {
       return;
     }
     for (const row of visible) {
+      const isCurrentRow = isCurrent(row);
       const remove = el('button', { class: 'btn-icon memory-remove', type: 'button', title: '删除记忆', text: '×', onClick: async () => {
         await deleteMemory(row.id);
         rows.splice(rows.indexOf(row), 1);
@@ -54,12 +56,30 @@ export async function mountMemoryView(container) {
         await renderStorageStats();
         toast('已删除这条记忆', 'info', 1400);
       } });
+      const confirmButton = row.status !== 'deleted' && row.status !== 'past' ? el('button', {
+        class: 'btn btn-ghost memory-confirm', type: 'button', text: row.triggerType === 'explicit_confirmation' ? '再次确认' : '我确认仍有效',
+        onClick: async () => {
+          const yes = await confirmDialog({ title: '确认这条事实仍然有效？', message: '确认操作会记录本次确认时间、提高置信度和长期重要度。普通主题提及不会执行这项更新。', confirmText: '确认仍有效' });
+          if (!yes) return;
+          try {
+            const updated = await confirmMemory(row.id);
+            Object.assign(row, updated);
+            renderList();
+            toast('已记录明确确认，并更新长期记忆状态。', 'success');
+          } catch (error) { toast(error.message, 'warning'); }
+        },
+      }) : null;
+      const stateLabel = row.status === 'past' || (row.validUntil && Number(row.validUntil) <= Date.now()) ? '过去事实' : (isCurrentRow ? '当前有效' : '尚未生效');
       memories.append(el('article', { class: 'memory-item' }, [
         el('div', { class: 'memory-item-top' }, [
           el('span', { class: `memory-type-tag is-${row.kind}`, text: KINDS[row.kind] || '记忆' }),
-          el('span', { class: 'memory-date', text: new Date(row.createdAt || row.eventTime).toLocaleDateString('zh-CN') }), remove,
+          el('span', { class: `memory-state-tag${isCurrentRow ? ' is-current' : ''}`, text: stateLabel }),
+          el('span', { class: 'memory-date', text: `发生于 ${new Date(row.eventTime || row.createdAt).toLocaleDateString('zh-CN')}` }),
+          el('div', { class: 'memory-row-actions' }, [confirmButton, remove]),
         ]),
         el('p', { class: 'memory-content', text: row.content }),
+        el('p', { class: 'memory-effective-time', text: `有效时间：${row.validFrom ? new Date(row.validFrom).toLocaleDateString('zh-CN') : '未注明起始'} — ${row.validUntil ? new Date(row.validUntil).toLocaleDateString('zh-CN') : '当前仍有效'}` }),
+        row.triggerType ? el('p', { class: 'memory-effective-time', text: `记录方式：${row.triggerType === 'explicit_confirmation' ? '用户明确确认' : (row.triggerType === 'topic_mention' ? '普通主题提及，不更新旧事实权重' : (row.triggerType === 'decision_review' ? '复盘确认' : '用户保存或导入'))}` }) : null,
         row.tags?.length ? el('div', { class: 'memory-tags', text: row.tags.map((tag) => `#${tag}`).join('  ') }) : null,
       ]));
     }
@@ -165,7 +185,7 @@ export async function mountMemoryView(container) {
   const form = el('form', { class: 'memory-compose', onSubmit: async (event) => {
     event.preventDefault();
     try {
-      const row = await addManualMemory(convId, { content: formInput.value, kind: kind.value });
+      const row = await addManualMemory(convId, { content: formInput.value, kind: kind.value, basis: 'explicit', confidence: 1, triggerType: 'manual_entry', source: 'user-manual-entry' });
       rows.unshift(row);
       formInput.value = '';
       renderList();

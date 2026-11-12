@@ -1,18 +1,21 @@
 /* ==========================================================================
    jiuban · 应用入口
-   启动、视图路由（聊天 / 设置 / 记忆 / 日记）、DeepSeek 连接小窗口
+   启动、视图路由（聊天 / 设置 / 记忆 / 复盘 / 人物回忆 / 平行世界）
    ========================================================================== */
 
 import { $, $$, el, toast } from './util.js';
 import { initUserProfile } from './user-profile.js?v=1.9.4';
 
-const VIEWS = new Set(['chat', 'settings', 'memory', 'diary']);
-const ASSET_VERSION = '1.9.8';
+const VIEWS = new Set(['chat', 'settings', 'memory', 'diary', 'decision', 'people', 'worlds']);
+const ASSET_VERSION = '1.11.0';
 
 const PAGE_MODULES = {
   settings: { path: './settings-view.js', mount: 'mountSettingsView' },
   memory: { path: './memory-view.js', mount: 'mountMemoryView' },
   diary: { path: './diary-view.js', mount: 'mountDiaryView' },
+  decision: { path: './decision-view.js', mount: 'mountDecisionView' },
+  people: { path: './people-view.js', mount: 'mountPeopleView' },
+  worlds: { path: './worlds-view.js', mount: 'mountWorldsView' },
 };
 
 const app = $('#app');
@@ -183,7 +186,7 @@ function init() {
   window.__JIUBAN_READY__ = true;
   const bootWarning = document.getElementById('boot-warning');
   if (bootWarning) bootWarning.hidden = true;
-  console.info('[久伴] v1.7.0 · 若点击无响应，请强制刷新 ⌘/Ctrl+Shift+R');
+  console.info('[久伴] v1.11.0 · 若点击无响应，请强制刷新 ⌘/Ctrl+Shift+R');
   // 只保留浅色外观
   document.documentElement.dataset.theme = 'light';
   document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'light');

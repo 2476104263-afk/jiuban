@@ -1,9 +1,9 @@
 {
   "name": "jiuban",
-  "version": "1.7.0",
+  "version": "1.11.0",
   "private": true,
   "type": "module",
-  "description": "久伴 · 桌面端聊天网页应用（DeepSeek + 插件扩展）",
+  "description": "久伴 · 桌面端聊天网页应用（长期记忆 + 平行世界群聊）",
   "scripts": {
     "start": "node serve.mjs",
     "start:local": "HOST=127.0.0.1 node serve.mjs",

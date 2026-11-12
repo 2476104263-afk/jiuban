@@ -9,7 +9,7 @@
 | **在线地址** | <https://2476104263-afk.github.io/jiuban/> |
 | **GitHub 仓库** | <https://github.com/2476104263-afk/jiuban> |
 | **部署方式** | GitHub Pages → Source = `Deploy from a branch` → 分支 `main` → 目录 `/ (root)` |
-| **当前版本** | v1.7.0（2026-11-07 发布） |
+| **当前版本** | v1.11.0（2026-11-12 发布） |
 | **HTTPS** | 自动开启（`github.io` 域名默认 HTTPS） |
 | **发布触发** | 推送到 `main` 后自动重新构建，通常 1～2 分钟生效 |
 
@@ -176,6 +176,13 @@ https://<你的用户名>.github.io/<仓库名>/
 ---
 
 ## 六、本次发布记录
+
+- **2026-11-12**：发布 v1.11.0 网页端（平行世界 / 人物回忆 / 决策复盘 / 时序记忆）；
+  - 移除插件系统（`plugins.js`、`plugin-editor.js`、`plugins.css` 及设置页相关入口），改为「平行世界」多智能体群聊；
+  - 新增 `decision-view.js`、`people-view.js`、`worlds-view.js` 及对应样式，导航扩展为 7 个入口；
+  - 统一版本号 v1.11.0（`package.json`、`index.html` 的 `app.js?v=`、`ASSET_VERSION`、设置页「关于」）；
+  - 同步升级本次改动的 `chat.css` / `settings.css` / `memory.css` 缓存版本号，避免访客看到旧样式；
+  - 发布前本地无头浏览器验收：7 个视图均能打开、演示模式聊天正常、无 JS 报错与 404。
 
 - **2026-11-07**：发布 v1.7.0 网页端（长期记忆 / 记忆日记 / 个人资料 / 新界面）；
   - 修复 `assets/js/app.js` 启动时调用已删除的 `tickClock()` 导致聊天模块不加载的问题；

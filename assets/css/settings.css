@@ -1,6 +1,6 @@
 /* ==========================================================================
    jiuban · 设置页
-   DeepSeek 连接状态 + 开发人员选项
+   DeepSeek 连接与本地数据说明
    ========================================================================== */
 
 .settings-page {
@@ -243,152 +243,6 @@
   resize: vertical;
 }
 
-.settings-dev-card .settings-card-head {
-  border-bottom: 0;
-  padding-bottom: 6px;
-}
-
-.settings-dev-section {
-  padding: 14px 0;
-  border-top: 1px solid var(--divider);
-}
-
-.settings-dev-section:first-of-type {
-  border-top: 0;
-  padding-top: 6px;
-}
-
-.settings-dev-title {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-  font-size: var(--fs-base);
-  font-weight: 600;
-}
-
-.settings-dev-title svg {
-  color: var(--text-3);
-}
-
-.settings-dev-sub {
-  color: var(--text-3);
-  font-size: var(--fs-sm);
-  font-weight: 400;
-}
-
-.settings-dev-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 10px;
-}
-
-.settings-dev-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-panel-2);
-  min-width: 0;
-}
-
-.settings-dev-icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  font-size: 16px;
-}
-
-.settings-dev-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.settings-dev-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--fs-base);
-  font-weight: 600;
-}
-
-.settings-dev-badge {
-  height: 18px;
-  padding: 0 6px;
-  font-size: 10px;
-}
-
-.settings-dev-desc {
-  margin-top: 1px;
-  color: var(--text-3);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.settings-dev-installed-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-}
-
-.settings-switch {
-  flex: none;
-}
-
-.settings-dev-empty {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 10px 2px;
-  color: var(--text-3);
-  font-size: var(--fs-sm);
-  line-height: 1.6;
-  grid-column: 1 / -1;
-}
-
-.settings-dev-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.settings-dev-add {
-  margin-top: 10px;
-}
-
-.settings-dev-danger .settings-dev-title {
-  color: var(--danger);
-}
-
-.settings-dev-danger .settings-dev-title svg {
-  color: var(--danger);
-}
-
-.settings-dev-meta {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border);
-  color: var(--text-3);
-  font-size: 11px;
-  line-height: 1.6;
-  word-break: break-word;
-}
-
 .settings-about {
   padding: 4px 2px 0;
   color: var(--text-3);
@@ -409,18 +263,4 @@
     display: none;
   }
 
-  .settings-dev-item {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .settings-dev-installed-actions {
-    margin-left: 42px;
-  }
-}
-
-@media (max-width: 760px) {
-  .settings-dev-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

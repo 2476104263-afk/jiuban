@@ -1,13 +1,13 @@
 /* ==========================================================================
    qqai · 聊天模块
-   会话列表、消息渲染、输入区、流式对话编排（DeepSeek / 演示模式 / 插件函数调用）
+   会话列表、消息渲染、输入区、流式对话编排（DeepSeek / 演示模式 / 长期记忆）
    ========================================================================== */
 
 import { store, subscribe } from './store.js';
 import { getGroupMembers, getPersona } from './data.js';
 import { getUserProfile } from './user-profile.js?v=1.9.4';
 import { languageStylePrompt } from './language-style.js?v=1.9.5';
-import { addManualMemory, COMPANION_MEMORY_SCOPE, getCognitionState, getCheckpoint, memoryEnabled, memoryPrompt, rememberExplicitMessage, retrieveMemories, saveMemoryCandidates, setCheckpoint } from './memory.js?v=1.9.8';
+import { addManualMemory, COMPANION_MEMORY_SCOPE, getCognitionState, getCheckpoint, memoryEnabled, memoryPrompt, rememberExplicitMessage, retrieveMemories, saveMemoryCandidates, setCheckpoint } from './memory.js?v=1.9.9';
 import {
   $,
   $$,
@@ -51,9 +51,7 @@ let streaming = null;
 let suppressMessagesRender = false;
 let pendingImage = null;
 let emojiOpen = false;
-let pluginsApi = null;
 let apiApi = null;
-let pluginsFailed = false;
 let lastPaint = 0;
 const memoryExtractionInFlight = new Set();
 
@@ -67,7 +65,6 @@ export async function initChat() {
   buildEmojiPicker();
   buildDemoBanner();
   buildAttachPreview();
-  await ensurePlugins();
   updateStatus();
   renderAll();
   document.title = TITLE_BASE;
@@ -212,9 +209,6 @@ function bindSubscriptions() {
     updateComposerHint();
   });
 
-  subscribe('plugins:changed', () => {
-    updateComposerHint();
-  });
 }
 
 /* --------------------------------------------------------------------------
@@ -484,9 +478,9 @@ function bubbleHtml(conv, msg, isStreaming) {
 }
 
 function toolCallHtml(call) {
-  const display = call.displayName || pluginsApi?.getToolDisplayName?.(call.name) || call.name;
+  const display = call.displayName || ({ jiuban_remember: '已记住', jiuban_recall: '记忆检索' }[call.name] || call.name);
   const emojiMatch = String(display).match(/^([\p{Extended_Pictographic}\uFE0F]+)\s*/u);
-  const emoji = emojiMatch ? emojiMatch[1] : '🧩';
+  const emoji = emojiMatch ? emojiMatch[1] : '🧠';
   const name = emojiMatch ? String(display).slice(emojiMatch[0].length) : String(display);
   const stateText =
     call.status === 'running' ? '调用中…' : call.status === 'error' ? '失败' : '已完成';
@@ -828,23 +822,6 @@ async function ensureApi() {
   }
 }
 
-async function ensurePlugins() {
-  if (pluginsApi || pluginsFailed) return pluginsApi;
-  try {
-    pluginsApi = await import('./plugins.js?v=1.6.0');
-    if (!pluginsApi.pluginManager) {
-      pluginsApi = null;
-      pluginsFailed = true;
-    }
-  } catch (err) {
-    console.warn('[jiuban] plugins.js 加载失败', err);
-    pluginsFailed = true;
-    pluginsApi = null;
-  }
-  updateComposerHint();
-  return pluginsApi;
-}
-
 async function buildApiMessages(conv, member) {
   const parts = [];
   if (conv.kind === 'group') {
@@ -856,16 +833,8 @@ async function buildApiMessages(conv, member) {
   } else {
     parts.push(conv.systemPrompt || member.systemPrompt || '');
   }
-  const addons = pluginsApi?.getPromptAddons?.() || '';
-  if (addons) parts.push(`# 已启用的 AI 插件能力\n${addons}`);
-  const pluginTools = pluginsApi?.getActiveToolSchemas?.() || [];
   const memoryAvailable = memoryEnabled() && conv.kind !== 'group';
-  const tools = memoryAvailable ? [...pluginTools, ...MEMORY_TOOLS] : pluginTools;
-  if (tools.length) {
-    parts.push(
-      '你可以调用已启用的插件工具。遇到精确计算、时间、待办、单位换算等需要准确结果的请求时，优先调用工具，不要凭记忆编造。'
-    );
-  }
+  const tools = memoryAvailable ? MEMORY_TOOLS : [];
   if (memoryAvailable) {
     const latestUserText = [...conv.messages].reverse().find((msg) => msg.role === 'user')?.content || '';
     let recalled = [];
@@ -899,7 +868,7 @@ async function buildApiMessages(conv, member) {
         ? `【${msg.sender.name}】${msg.content}`
         : msg.content;
       const item = { role: 'assistant', content };
-      // 官方要求：请求带 tools 时，历史 assistant 的 reasoning_content 需要回传，否则可能 400
+      // 请求带记忆工具时，保留历史 reasoning_content。
       if (tools.length && msg.reasoning) item.reasoning_content = msg.reasoning;
       messages.push(item);
     }
@@ -963,7 +932,7 @@ async function replyWithApi(conv, member, signal) {
         record: {
           id: call.id || uid('tool'),
           name: call.name,
-          displayName: pluginsApi?.getToolDisplayName?.(call.name) || call.name,
+          displayName: ({ jiuban_remember: '记录记忆', jiuban_recall: '检索记忆' }[call.name] || call.name),
           args: safeParseJson(call.arguments),
           result: '',
           status: 'running',
@@ -1009,9 +978,7 @@ async function replyWithApi(conv, member, signal) {
               display: found.length ? `找到 ${found.length} 条记忆` : '没有相关记忆',
             };
           } else {
-            exec = pluginsApi?.executeTool
-            ? await pluginsApi.executeTool(item.call.name, safeParseJson(item.call.arguments))
-            : { ok: false, result: '插件系统未加载' };
+            exec = { ok: false, result: '不支持的记忆操作。' };
           }
         } catch (err) {
           exec = { ok: false, result: String(err?.message || err) };
@@ -1089,8 +1056,10 @@ async function consolidateConversationMemory(convId) {
         content: [
           '你是陪伴 AI 的长期记忆整理器。仅从新对话中提取有持续价值的经历、事实、稳定偏好、关系变化和长期目标。',
           '不要保存寒暄、一次性小事、密码或敏感推断。区分用户明确表达与模型推断。',
+          '区分触发方式：用户只是再次谈到某主题时，triggerType 用 topic_mention；用户明确说“记住”时用 explicit_save；用户明确确认、纠正或更新既有事实时才用 explicit_confirmation。普通提及不得提高长期重要度，也不得把旧事实改写成当前事实。',
+          '分别记录 eventTime（事情发生时间）、validFrom（事实开始有效时间）和 validUntil（事实失效时间；没有明确终止时间时留空）。不要把聊天提及时间当成事件发生或事实生效时间。',
           '每条记忆必须包含 sourceIds 和 evidenceQuote；sourceIds 必须引用输入消息 ID，evidenceQuote 必须逐字出现在对应的用户消息中。',
-          '只返回 JSON：{"memories":[{"kind":"episode|fact|preference|relation|goal|reflection","content":"简短记忆","eventTime":"ISO日期","people":"相关人物","tags":["关键词"],"mapKey":"稳定主题键","importance":0.0,"confidence":0.0,"basis":"explicit|inferred","sourceIds":["消息ID"],"evidenceQuote":"逐字原文"}]}。没有值得保存的内容时返回空数组。',
+          '只返回 JSON：{"memories":[{"kind":"episode|fact|preference|relation|goal|reflection","content":"简短记忆","eventTime":"ISO日期或空","validFrom":"ISO日期或空","validUntil":"ISO日期或空","people":"相关人物","tags":["关键词"],"mapKey":"稳定主题键","importance":0.0,"confidence":0.0,"basis":"explicit|inferred","triggerType":"topic_mention|explicit_save|explicit_confirmation","sourceIds":["消息ID"],"evidenceQuote":"逐字原文"}]}。没有值得保存的内容时返回空数组。',
         ].join('\n'),
       },
       { role: 'user', content: JSON.stringify({ new_messages: batch }) },
@@ -1130,22 +1099,8 @@ async function replyDemo(conv, member, signal) {
 
   try {
     await delay(360, signal);
-    const tool = await runDemoTool(userText);
-    if (tool) {
-      live.toolCalls.push({
-        id: uid('tool'),
-        name: tool.name,
-        displayName: tool.displayName || tool.name,
-        args: tool.args,
-        result: tool.result,
-        status: 'done',
-      });
-      paint();
-      await delay(180, signal);
-    }
-
     const demoAlready = conv.messages.some((msg) => msg.demo);
-    const content = buildDemoText(conv, member, userText, tool, demoAlready);
+    const content = buildDemoText(conv, member, userText, demoAlready);
     for (const chunk of chunkText(content)) {
       if (signal.aborted) throw abortError();
       live.content += chunk;
@@ -1174,59 +1129,6 @@ async function replyDemo(conv, member, signal) {
   }
 }
 
-async function runDemoTool(text) {
-  if (!pluginsApi?.getActiveToolSchemas) return null;
-  let enabled = [];
-  try {
-    enabled = (pluginsApi.getActiveToolSchemas() || []).map((item) => item.function?.name).filter(Boolean);
-  } catch (err) {
-    return null;
-  }
-  const has = (name) => enabled.includes(name);
-  const call = async (name, args) => {
-    if (!has(name)) return null;
-    try {
-      const result = await pluginsApi.executeTool(name, args);
-      if (!result || result.ok === false) return null;
-      return {
-        name,
-        args,
-        result: String(result.result ?? ''),
-        displayName: pluginsApi.getToolDisplayName?.(name) || name,
-      };
-    } catch (err) {
-      return null;
-    }
-  };
-
-  if (/天气/.test(text)) return call('get_weather', { city: extractCity(text) || '北京' });
-  if (/几点|现在时间|今天的日期|星期几/.test(text)) return call('get_current_time', {});
-  if (/待办|todo|清单/i.test(text)) return call('manage_todos', { action: /加|添加|新增/.test(text) ? 'add' : 'list', item: text });
-  if (/随机|抽签|摇一个|帮我选/.test(text)) {
-    return call('random_pick', { items: ['火锅', '烧烤', '日料', '面条', '汉堡'], count: 1 });
-  }
-  if (/骰子|掷个/.test(text)) return call('roll_dice', { sides: 6, count: 1 });
-  if (/换算|多少厘米|多少公里|多少斤|多少磅|多少华氏/.test(text)) {
-    return call('convert_units', { value: 1, from: 'km', to: 'm' });
-  }
-  const mathMatch = text.match(/[（(]?[0-9][0-9\s+\-*/().%×÷]{1,}[0-9)]?/);
-  if (mathMatch && /[+\-*/×÷%]/.test(mathMatch[0])) {
-    const expression = mathMatch[0]
-      .replace(/（/g, '(')
-      .replace(/）/g, ')')
-      .replace(/×/g, '*')
-      .replace(/÷/g, '/')
-      .trim();
-    return call('calculate', { expression });
-  }
-  return null;
-}
-
-function extractCity(text) {
-  const match = text.match(/(?:天气|气温)[^，,。]*?([\u4e00-\u9fa5]{2,8}?)(?:的|今天|明天|怎么样|如何|$)/);
-  return match ? match[1] : '';
-}
-
 function chunkText(text) {
   const chunks = [];
   let index = 0;
@@ -1238,40 +1140,17 @@ function chunkText(text) {
   return chunks;
 }
 
-function buildDemoText(conv, member, userText, tool, demoAlready) {
+function buildDemoText(conv, member, userText, demoAlready) {
   const name = member?.name || conv.name;
   const text = (userText || '').trim();
   let body = '';
-
-  if (tool) {
-    const label = tool.displayName || tool.name;
-    const footer = demoAlready
-      ? ''
-      : '\n\n---\n\n> 💡 当前为 **演示模式**：以上结果由本地插件 + 本地规则生成。到「设置 → DeepSeek API」填入 Key 后可获得真实模型回复。';
-    if (tool.name === 'calculate') {
-      return `我调用插件 **${label}** 算了一下：\n\n\`\`\`text\n${String(tool.result).slice(
-        0,
-        600
-      )}\n\`\`\`\n\n需要继续计算或换算，随时告诉我。${footer}`;
-    }
-    const followUp =
-      tool.name === 'get_current_time'
-        ? '这是当前时间，需要我帮你安排点什么吗？'
-        : tool.name === 'get_weather'
-          ? '以上是演示天气数据，真实数据需要接入天气服务。'
-          : '需要我基于这个结果继续帮你分析吗？';
-    return `我先调用了一下插件 **${label}**：\n\n\`\`\`text\n${String(tool.result).slice(
-      0,
-      600
-    )}\n\`\`\`\n\n${followUp}${footer}`;
-  }
 
   const personaId = member?.id || conv.personaId;
   if (conv.kind === 'group') {
     if (personaId === 'coder') {
       body += `${name} 的看法：\n\n- 这个需求技术上完全可行，建议先拆成「数据层 / 交互层 / 展示层」三块；\n- 如果是网页端，优先用原生 ES Module，零依赖、加载快；\n- 注意错误处理与空状态，别让用户看到白屏。\n\n\`\`\`js\n// 一个可复用的防抖函数\nfunction debounce(fn, wait = 200) {\n  let timer = null;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), wait);\n  };\n}\n\`\`\`\n\n需要我直接给一版实现的话，把具体场景发我。`;
     } else if (personaId === 'writer') {
-      body += `${name} 来抛个文案方向：\n\n**版本一（轻松种草）**\n> 不用打开十个 App，一个久伴就把想说的话都装进聊天框。\n\n**版本二（效率卖点）**\n> 聊天、写代码、改文案、调用插件，都在一个窗口里。\n\n**版本三（情绪价值）**\n> 你的 AI 搭子已上线，24 小时在线，随时接住你的奇思妙想。\n\n喜欢哪个方向？我还能再压一版更短的。`;
+      body += `${name} 来抛个文案方向：\n\n**版本一（轻松种草）**\n> 把想说的话都装进一个聊天窗口。\n\n**版本二（效率卖点）**\n> 聊天、写代码、改文案，都可以在一个窗口里完成。\n\n**版本三（情绪价值）**\n> 你的 AI 搭子已上线，随时接住你的奇思妙想。\n\n喜欢哪个方向？我还能再压一版更短的。`;
     } else if (personaId === 'translator') {
       body += `${name} 的翻译建议：\n\n**中文原文**：${text || '（暂未收到完整句子）'}\n\n**英文参考**：\n> Here's a natural English version of your sentence. The key is to keep the tone casual and conversational, just like a chat between friends.\n\n**关键词提示**：口语表达里可以少用被动语态，多用短句，读起来更自然。`;
     } else {
@@ -1287,9 +1166,9 @@ function buildDemoText(conv, member, userText, tool, demoAlready) {
     body += `我在听 🌙\n\n听起来这件事让你有些在意。可以先不急着解决它，先说说：\n\n- 这件事里最让你难受的是什么？\n- 你希望对方当时怎么做？\n\n慢慢说，不着急。`;
   } else {
     if (/你好|hi|hello|在吗|嗨/i.test(text)) {
-      body += `嗨，我在的 👋\n\n我是 **${name}**，可以陪你聊天、帮你写东西、解释概念、改代码，也可以调用已安装的插件（计算器、时间、待办、单位换算……）。\n\n想聊点什么？`;
+      body += `嗨，我在的 👋\n\n我是 **${name}**，可以陪你聊天、帮你写东西、解释概念或改代码。\n\n想聊点什么？`;
     } else if (/你能做什么|功能|会什么|介绍/.test(text)) {
-      body += `我的能力清单大概是这样：\n\n| 能力 | 说明 |\n| --- | --- |\n| 💬 日常聊天 | 闲聊、脑洞、情绪树洞 |\n| ✍️ 写作 | 文案、邮件、周报、润色 |\n| 💻 编程 | 代码解释、debug、写脚本 |\n| 🌐 翻译 | 中英互译 + 表达建议 |\n| 🧩 插件 | 计算器、时间、待办、单位换算等 |\n\n> 当前是演示模式。到「设置 → DeepSeek API」填入 API Key 后，就能用真实模型回答任何问题。`;
+      body += `我的能力清单大概是这样：\n\n| 能力 | 说明 |\n| --- | --- |\n| 💬 日常聊天 | 闲聊、脑洞、情绪树洞 |\n| ✍️ 写作 | 文案、邮件、周报、润色 |\n| 💻 编程 | 代码解释、debug、写脚本 |\n| 🌐 翻译 | 中英互译 + 表达建议 |\n| 🗂️ 记忆 | 在记忆页查看和整理长期记录 |\n\n> 当前是演示模式。到「设置 → DeepSeek API」填入 API Key 后，就能用真实模型回答任何问题。`;
     } else if (/api|key|deepseek|接入|配置/i.test(text)) {
       body += `配置 DeepSeek API Key 很简单：\n\n1. 打开左下角 **⚙️ 设置** → 「DeepSeek API 接入」；\n2. 在 [platform.deepseek.com](https://platform.deepseek.com/api_keys) 生成 API Key；\n3. 粘贴到输入框，点「测试连接」，成功后保存；\n4. 回到聊天页，状态徽标会变成 **DeepSeek**，回复就走真实模型了。\n\nKey 只保存你这台浏览器的 localStorage，不会经过第三方服务器。`;
     } else {
