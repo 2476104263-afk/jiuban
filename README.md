@@ -7,18 +7,6 @@
 - 🌐 **在线使用**：<https://2476104263-afk.github.io/jiuban/>
 - 📦 **源码仓库**：<https://github.com/2476104263-afk/jiuban>
 
-![Memora图标](docs/icon.png)
-
-## 桌面应用
-
-项目可作为 Windows 桌面程序运行，直接加载现有网页；聊天、记忆和设置保存在本机桌面应用的数据目录中。
-
-- Windows：安装 Node.js 24 后运行 `npm ci`、`npm run dist:win`，安装程序生成在 `release/`。也可在 GitHub Actions 手动运行 **Build Windows installer** 下载构建产物；推送 `v*` 标签时会自动构建。
-- macOS Apple 芯片：运行 `npm ci`、`npm run dist:mac`，DMG 生成在 `release/`。
-- 本机开发预览：运行 `npm run desktop`。
-
-![聊天界面](docs/screenshot-chat.png)
-
 ---
 
 ## 目录
