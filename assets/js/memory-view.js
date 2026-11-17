@@ -1,10 +1,8 @@
 import {
-  addManualMemory, clearMemories, COMPANION_MEMORY_SCOPE, confirmMemory, deleteMemory, exportMemorySnapshot, getCognitionState, getMemoryStorageStats,
-  importMemorySnapshot, listMemories, memoryEnabled, rebuildMemoryIndex, setCognitionState, setMemoryEnabled,
-} from './memory.js?v=1.9.9';
-import { createMemoryCloud } from './memory-cloud.js?v=1.9.3';
-import { store } from './store.js';
-import { LANGUAGE_STYLES } from './language-style.js?v=1.9.5';
+  addManualMemory, clearMemories, COMPANION_MEMORY_SCOPE, confirmMemory, deleteMemory, exportMemorySnapshot, getMemoryStorageStats,
+  importMemorySnapshot, listMemories, memoryEnabled, rebuildMemoryIndex, setMemoryEnabled,
+} from './memory.js?v=1.16.0';
+import { createMemoryCloud } from './memory-cloud.js?v=1.16.0';
 import { el, toast, confirmDialog, download } from './util.js';
 
 const KINDS = { episode: '经历', fact: '事实', preference: '偏好', relation: '关系', goal: '计划', reflection: '认知' };
@@ -15,7 +13,6 @@ export async function mountMemoryView(container) {
   const search = el('input', { class: 'input memory-search', placeholder: '搜索记忆…' });
   const formInput = el('textarea', { class: 'memory-compose-input', rows: 2, placeholder: '例如：我喜欢先看结论，再看详细解释。' });
   const kind = el('select', { class: 'input memory-kind' }, Object.entries(KINDS).map(([value, label]) => el('option', { value, text: label })));
-  let cognition = getCognitionState();
   const enabled = el('button', { class: 'memory-toggle', type: 'button', role: 'switch' });
   const countBadge = el('span', { class: 'memory-count', text: '0' });
   const rows = await listMemories(convId);
@@ -74,10 +71,11 @@ export async function mountMemoryView(container) {
         el('div', { class: 'memory-item-top' }, [
           el('span', { class: `memory-type-tag is-${row.kind}`, text: KINDS[row.kind] || '记忆' }),
           el('span', { class: `memory-state-tag${isCurrentRow ? ' is-current' : ''}`, text: stateLabel }),
-          el('span', { class: 'memory-date', text: `发生于 ${new Date(row.eventTime || row.createdAt).toLocaleDateString('zh-CN')}` }),
+          el('span', { class: 'memory-date', text: `发生于 ${row.eventTimeUnknown ? '时间未记录' : new Date(row.eventTime || row.createdAt).toLocaleDateString('zh-CN')}` }),
           el('div', { class: 'memory-row-actions' }, [confirmButton, remove]),
         ]),
         el('p', { class: 'memory-content', text: row.content }),
+        row.evidenceQuote ? el('blockquote', { class: 'memory-evidence-quote', text: `来源原文：“${row.evidenceQuote}”` }) : null,
         el('p', { class: 'memory-effective-time', text: `有效时间：${row.validFrom ? new Date(row.validFrom).toLocaleDateString('zh-CN') : '未注明起始'} — ${row.validUntil ? new Date(row.validUntil).toLocaleDateString('zh-CN') : '当前仍有效'}` }),
         row.triggerType ? el('p', { class: 'memory-effective-time', text: `记录方式：${row.triggerType === 'explicit_confirmation' ? '用户明确确认' : (row.triggerType === 'topic_mention' ? '普通主题提及，不更新旧事实权重' : (row.triggerType === 'decision_review' ? '复盘确认' : '用户保存或导入'))}` }) : null,
         row.tags?.length ? el('div', { class: 'memory-tags', text: row.tags.map((tag) => `#${tag}`).join('  ') }) : null,
@@ -90,88 +88,6 @@ export async function mountMemoryView(container) {
     enabled.setAttribute('aria-checked', memoryEnabled() ? 'true' : 'false');
     enabled.textContent = memoryEnabled() ? '已开启' : '已暂停';
   }
-
-  const cognitionRanges = {};
-  const cognitionValues = {};
-  const cognitionFields = Object.entries({
-    warmth: { label: '温暖表达', low: '克制', high: '温暖' },
-    caution: { label: '谨慎程度', low: '灵活', high: '谨慎' },
-    curiosity: { label: '好奇倾向', low: '聚焦', high: '好奇' },
-    energy: { label: '表达活跃度', low: '平和', high: '活跃' },
-  }).map(([key, config]) => {
-    const value = Math.round(cognition[key] * 100);
-    const range = el('input', {
-      class: 'cognition-range', type: 'range', min: 0, max: 100, step: 1, value,
-      'aria-label': config.label,
-    });
-    cognitionRanges[key] = range;
-    cognitionValues[key] = el('b', { text: `${value}%` });
-    range.addEventListener('input', () => {
-      cognition = setCognitionState({ ...cognition, [key]: Number(range.value) / 100 });
-      cognitionValues[key].textContent = `${range.value}%`;
-      range.style.setProperty('--range-progress', `${range.value}%`);
-    });
-    range.style.setProperty('--range-progress', `${value}%`);
-    return el('label', { class: 'cognition-control' }, [
-      el('span', { class: 'cognition-control-head' }, [el('span', { text: config.label }), cognitionValues[key]]),
-      range,
-      el('span', { class: 'cognition-control-ends' }, [el('span', { text: config.low }), el('span', { text: config.high })]),
-    ]);
-  });
-
-  const languageStyleSelect = el('select', { class: 'input settings-style-select', 'aria-label': '回复语言风格' }, LANGUAGE_STYLES.map((style) =>
-    el('option', { value: style.id, text: style.label })
-  ));
-  const languageStyleDescription = el('p', { class: 'settings-style-description' });
-  const customStyleField = el('textarea', { class: 'input settings-style-custom', rows: 3, maxlength: 500, placeholder: '例如：像一位耐心的技术搭档，先给结论，再分步骤说明。' });
-  const customStyleWrap = el('div', { class: 'settings-style-custom-wrap' }, [
-    el('label', { class: 'settings-style-label', text: '自定义表达方式' }),
-    customStyleField,
-    el('p', { class: 'settings-style-hint', text: '最多 500 字，只调整表达方式；本轮明确要求仍优先。' }),
-  ]);
-  const personalityField = el('textarea', {
-    class: 'input settings-personality-input', rows: 4, maxlength: 2000,
-    placeholder: '例如：你是温和而有主见的学习搭档，擅长把复杂问题拆成小步骤。',
-    value: store.settings.personalityPrompt || '',
-  });
-  const personalityCount = el('span', { class: 'settings-personality-count', text: `${(store.settings.personalityPrompt || '').length}/2000` });
-  function renderLanguageStyle() {
-    const selected = LANGUAGE_STYLES.find((style) => style.id === store.settings.languageStyle) || LANGUAGE_STYLES[0];
-    languageStyleSelect.value = selected.id;
-    languageStyleDescription.textContent = selected.description;
-    customStyleWrap.hidden = selected.id !== 'custom';
-    customStyleField.value = store.settings.languageStyleCustom || '';
-  }
-  languageStyleSelect.addEventListener('change', () => {
-    store.updateSettings({ languageStyle: languageStyleSelect.value });
-    renderLanguageStyle();
-    toast('语言风格已更新', 'success', 1400);
-  });
-  customStyleField.addEventListener('input', () => store.updateSettings({ languageStyleCustom: customStyleField.value.slice(0, 500) }));
-  personalityField.addEventListener('input', () => {
-    const value = personalityField.value.slice(0, 2000);
-    if (personalityField.value !== value) personalityField.value = value;
-    personalityCount.textContent = `${value.length}/2000`;
-    store.updateSettings({ personalityPrompt: value });
-  });
-  renderLanguageStyle();
-
-  const cognitionCard = el('section', { class: 'card memory-card memory-cognition-card' }, [
-    el('div', { class: 'memory-card-heading' }, [el('div', {}, [el('h2', { text: '表达状态与对话体验' }), el('p', { text: '拖动滑块调节久伴的表达倾向；这只是回复风格设置，不代表真实情绪。' })]), el('span', { class: 'memory-orb', text: '✦' })]),
-    el('div', { class: 'cognition-grid' }, cognitionFields),
-    el('div', { class: 'memory-conversation-settings' }, [
-      el('h3', { text: '对话体验' }),
-      el('label', { class: 'settings-style-label', text: '回复风格' }),
-      languageStyleSelect,
-      languageStyleDescription,
-      customStyleWrap,
-      el('div', { class: 'settings-personality-divider' }),
-      el('div', { class: 'settings-personality-heading' }, [el('div', { class: 'settings-style-label', text: '定制人格提示词' }), personalityCount]),
-      el('p', { class: 'settings-style-hint', text: '描述身份设定、交流关系、兴趣和相处习惯；最多 2000 字。' }),
-      personalityField,
-      el('p', { class: 'settings-style-hint', text: '只影响之后的模型回复，不改写已有聊天记录。' }),
-    ]),
-  ]);
 
   const storageCard = el('section', { class: 'card memory-card memory-storage-card' }, [
     el('div', { class: 'memory-card-heading' }, [el('div', {}, [el('h2', { text: '双层记忆库' }), el('p', { text: '索引负责快速检索，完整记忆保存在本机。' })])]),
@@ -243,7 +159,7 @@ export async function mountMemoryView(container) {
         el('div', {}, [el('h1', { class: 'page-title', text: '记忆与认知' }), el('p', { class: 'page-sub', text: '久伴的一对一聊天共用这份长期记忆，数据保存在本机浏览器。' })]), enabled,
       ]),
       el('div', { class: 'memory-primary-grid' }, [memoryCloud.element, storageCard]),
-      el('div', { class: 'memory-secondary-grid' }, [cognitionCard, longTermCard]),
+      el('div', { class: 'memory-secondary-grid' }, [longTermCard]),
     ]),
     importInput,
   );

@@ -8,3 +8,8 @@ node_modules/
 dist/
 # 桌面端打包产物（体积大，仅本地生成，不提交）
 release/
+# 记忆库服务运行数据（SQLite / 向量块文件）
+memory-service/data/
+
+# 本机临时分析与生成文件，不随网页发布
+.work/

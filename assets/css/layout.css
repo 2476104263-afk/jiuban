@@ -76,6 +76,14 @@
   gap: 8px;
 }
 
+.rail-top {
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.rail-top::-webkit-scrollbar { display: none; }
+
 .rail-nav {
   gap: 8px;
 }

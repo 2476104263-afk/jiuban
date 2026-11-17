@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Memora 记忆库服务 · 演示</title>
+<style>
+  :root { color-scheme: light; --ink:#1f2933; --muted:#667085; --line:#d9e2ec; --brand:#1f4e79; --soft:#eef4fb; --ok:#067647; --warn:#b54708; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; color: var(--ink); background: #f6f8fb; }
+  header { background: #fff; border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 18px; margin: 0; color: var(--brand); }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .status { margin-left: auto; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #98a2b3; }
+  .dot.ok { background: var(--ok); }
+  .dot.bad { background: #d92d20; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 18px 20px 60px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .tab:hover { border-color: var(--brand); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 10px; font-size: 15px; color: var(--brand); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+  textarea, input[type="text"], input[type="date"], input[type="number"], select { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; background: #fff; }
+  textarea { width: 100%; min-height: 84px; resize: vertical; }
+  button { border: 0; background: var(--brand); color: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  button.soft { background: var(--soft); color: var(--brand); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  .item { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; background: #fff; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--soft); color: var(--brand); margin-right: 6px; }
+  .score { font-weight: 600; color: var(--brand); }
+  .muted { color: var(--muted); font-size: 12px; }
+  .candidate { border-left: 3px solid #f79009; }
+  pre.trace { background: #0f172a; color: #d7e3f4; border-radius: 10px; padding: 12px; font-size: 12px; overflow: auto; max-height: 340px; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+  .danger { color: #b42318; background: none; border: 1px solid #f2b8b5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Memora 记忆库服务</h1>
+  <span class="sub">AURORA-CAIR 可靠区间 · 精确认证 Top-K · CARS 自适应恢复</span>
+  <span class="status"><span id="statusDot" class="dot"></span><span id="statusText">检测服务中…</span></span>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-tab="memory">记忆库</button>
+    <button class="tab" data-tab="search">认证检索</button>
+    <button class="tab" data-tab="diary">日记接入</button>
+    <button class="tab" data-tab="about">说明</button>
+  </div>
+
+  <section class="panel active" id="panel-memory">
+    <div class="card">
+      <h2>① 写入一条记忆</h2>
+      <textarea id="memoryText">今天复习线性代数，矩阵分解还是不太熟，下周计划再练 3 次。</textarea>
+      <div class="row">
+        <label class="muted">来源</label>
+        <select id="sourceType">
+          <option value="manual">手动记录</option>
+          <option value="diary">日记</option>
+          <option value="conversation">对话摘录</option>
+        </select>
+        <label class="hint"><input type="checkbox" id="autoConfirm" checked /> 直接确认（不经过候选确认）</label>
+        <span style="flex:1"></span>
+        <button id="ingestBtn">抽取并保存</button>
+      </div>
+      <div id="candidateList"></div>
+    </div>
+    <div class="card">
+      <h2>② 记忆列表</h2>
+      <div class="row">
+        <button class="soft" id="refreshBtn">刷新列表</button>
+        <button class="soft" id="seedBtn">载入演示数据</button>
+        <span class="hint">演示数据写入 owner_scope = demo</span>
+      </div>
+      <div id="memoryList"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-search">
+    <div class="card">
+      <h2>认证检索（Top-K 与全量精排一致）</h2>
+      <div class="row">
+        <input type="text" id="queryInput" value="线性代数 复习 问题" style="flex:1; min-width:240px" />
+        <label class="muted">K</label><input type="number" id="topK" value="5" min="1" max="20" style="width:70px" />
+        <select id="timeIntent">
+          <option value="current">当前（默认）</option>
+          <option value="history">历史</option>
+        </select>
+        <label class="hint"><input type="checkbox" id="mention" /> 记为“主题提及”（不改长期状态）</label>
+        <button id="searchBtn">检索</button>
+      </div>
+      <div id="searchResults"></div>
+    </div>
+    <div class="card">
+      <h2>检索轨迹（证书动作与 I/O）</h2>
+      <pre class="trace" id="traceBox">等待检索…</pre>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-diary">
+    <div class="card">
+      <h2>日记 → 记忆库</h2>
+      <div class="row">
+        <input type="date" id="diaryDate" />
+        <input type="text" id="diaryTitle" placeholder="日记标题（可选）" style="flex:1" />
+        <button id="diarySaveBtn">保存为日记记忆</button>
+      </div>
+      <textarea id="diaryText" placeholder="写一条日记，例如：今天项目联调遇到接口不一致，明天先对齐字段。"></textarea>
+      <div id="diaryResult" class="hint"></div>
+    </div>
+    <div class="split">
+      <div class="card">
+        <h2>日记记忆列表</h2>
+        <div id="diaryList" class="hint">尚未加载</div>
+      </div>
+      <div class="card">
+        <h2>按主题检索日记</h2>
+        <div class="row">
+          <input type="text" id="diaryQuery" placeholder="例如：接口 联调" style="flex:1" />
+          <button id="diarySearchBtn">检索</button>
+        </div>
+        <div id="diarySearchResults" class="hint">等待检索…</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-about">
+    <div class="card">
+      <h2>这个演示对应 AURORA-CAIR 的哪些创新点？</h2>
+      <ul class="hint" style="line-height:1.9">
+        <li><b>嵌套前缀量化与可靠区间</b>：每条向量存 16-bit 完整编码，4/8/16-bit 精度取同一编码前缀，区间天然嵌套；语义分数由区间算术得到上下界。</li>
+        <li><b>安全剪枝与精确认证</b>：上界低于第 K 大下界的候选不可能进入 Top-K；Top-K 成员下界严格高于外部上界时认证通过，再精确恢复内部顺序。</li>
+        <li><b>CARS 自适应恢复</b>：在单条恢复、块级恢复、多精度细化之间按收益/成本选择，无收益时安全回退到全量精排；轨迹记录动作与读取字节。</li>
+        <li><b>分层存储</b>：SQLite 保存元数据与压缩码，<code>vectors.bin</code> 按 16 条/块保存精确 float32 向量，块缓存计入 I/O 统计。</li>
+        <li><b>可维护性</b>：新增先写精确向量再发布索引；修正生成新版本并取代旧版本；删除先不可检索再释放槽位；当前/历史查询使用不同版本集合。</li>
+        <li><b>Memora 记忆语义</b>：事件时间与有效时间分离；普通主题提及只记录本轮激活，不修改长期权重；明确确认/修正才更新状态并留版本。</li>
+      </ul>
+      <p class="hint">注意：默认嵌入是确定性的字符 n-gram 哈希模型（离线可运行），不是语义大模型；Top-K 精确性是对“本服务定义的评分函数”而言的精确，不代表语义检索质量。</p>
+    </div>
+  </section>
+</div>
+
+<script type="module" src="./demo.js"></script>
+</body>
+</html>

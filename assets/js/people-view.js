@@ -1,6 +1,6 @@
 import { streamCompletion } from './api.js';
 import { store } from './store.js';
-import { confirmDialog, el, modal, renderMarkdown, toast } from './util.js';
+import { confirmDialog, el, icon, modal, renderMarkdown, toast } from './util.js';
 
 const STORAGE_KEY = 'jiuban.people-memories.v1';
 const MAX_PROFILES = 40;
@@ -154,10 +154,17 @@ function memoryForm(memory = null) {
   return { content, quote, source, eventDate, body };
 }
 
-export async function mountPeopleView(container) {
+export function mountPeopleView(container, { section = 'overview' } = {}) {
   let profiles = readProfiles();
-  let activeId = profiles[0]?.id || null;
+  let activeId = null;
+  let currentSection = section;
   let busy = false;
+  let disposed = false;
+
+  const profilePath = (profile) => `people/${encodeURIComponent(profile.id)}`;
+  function navigate(path) {
+    location.hash = `#${path}`;
+  }
 
   function activeProfile() {
     return profiles.find((item) => item.id === activeId) || null;
@@ -171,42 +178,52 @@ export async function mountPeopleView(container) {
   }
 
   function openProfileEditor(existing = null) {
-    const form = profileForm(existing);
-    let dialog;
-    const saveButton = el('button', { class: 'btn btn-primary', type: 'button', text: existing ? '保存档案' : '创建档案', onClick: () => {
-      const displayName = form.name.value.trim();
+    navigate(existing ? `${profilePath(existing)}/edit` : 'people/new');
+  }
+
+  function renderProfileEditor(existing = null) {
+    const fields = profileForm(existing);
+    fields.name.required = true;
+    fields.name.setAttribute('aria-label', '代号或昵称');
+    const saveButton = el('button', { class: 'btn btn-primary', type: 'submit', text: existing ? '保存档案' : '创建档案' });
+    const form = el('form', { class: 'people-editor-form card', onSubmit: (event) => {
+      event.preventDefault();
+      const displayName = fields.name.value.trim();
       if (!displayName) {
         toast('请先填写代号或昵称。', 'warning');
-        form.name.focus();
+        fields.name.focus();
         return;
       }
-      if (existing) {
-        const target = profiles.find((item) => item.id === existing.id);
-        if (!target) return dialog.close();
-        target.name = displayName;
-        target.context = form.context.value.trim();
-        target.voice = form.voice.value.trim();
-        target.updatedAt = Date.now();
-      } else {
-        if (profiles.length >= MAX_PROFILES) return toast(`最多保存 ${MAX_PROFILES} 份档案。`, 'warning');
-        const created = {
-          id: makeId(), name: displayName, context: form.context.value.trim(), voice: form.voice.value.trim(),
-          createdAt: Date.now(), updatedAt: Date.now(), memories: [], messages: [],
-        };
-        profiles.unshift(created);
-        activeId = created.id;
-      }
-      const saved = saveProfiles(profiles);
-      dialog.close();
-      render();
-      if (saved) toast(existing ? '档案已更新。' : '档案已创建。', 'success');
-    } });
-    dialog = modal({
-      title: existing ? '编辑人物档案' : '新建人物档案',
-      body: form.body,
-      footer: [el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => dialog.close() }, '取消'), saveButton],
-      wide: true,
-    });
+      if (!existing && profiles.length >= MAX_PROFILES) return toast(`最多保存 ${MAX_PROFILES} 份档案。`, 'warning');
+      const now = Date.now();
+      const profile = {
+        ...(existing || { id: makeId(), createdAt: now, memories: [], messages: [] }),
+        name: displayName, context: fields.context.value.trim(), voice: fields.voice.value.trim(), updatedAt: now,
+      };
+      const nextProfiles = existing ? profiles.map((item) => item.id === existing.id ? profile : item) : [profile, ...profiles];
+      if (!saveProfiles(nextProfiles)) return;
+      profiles = nextProfiles;
+      toast(existing ? '档案已更新。' : '档案已创建。', 'success');
+      navigate(profilePath(profile));
+    } }, [
+      el('div', { class: 'people-editor-heading' }, [
+        el('h2', { text: existing ? '编辑档案内容' : '从一个名字开始' }),
+        el('p', { text: '先写下代号或昵称，关系背景与表达观察可以慢慢补充。' }),
+      ]),
+      fields.body,
+      el('div', { class: 'people-editor-actions' }, [
+        el('a', { class: 'btn btn-ghost', href: existing ? `#${profilePath(existing)}` : '#people', text: '取消' }),
+        saveButton,
+      ]),
+    ]);
+    return el('div', { class: 'people-editor-layout' }, [
+      form,
+      el('aside', { class: 'people-editor-preview' }, [
+        fileIllustration(existing?.name || '', 0),
+        el('h2', { text: '一人一档，慢慢珍藏' }),
+        el('p', { text: '创建后，可以逐条补充回忆、保留原始片段，再从这些材料开始一段回忆对话。' }),
+      ]),
+    ]);
   }
 
   function openMemoryEditor(profile, existing = null) {
@@ -326,9 +343,9 @@ export async function mountPeopleView(container) {
       const yes = await confirmDialog({ title: `删除“${profile.name}”的档案？`, message: '档案、回忆、修订历史和对话都会从本地浏览器删除。', confirmText: '删除档案', danger: true });
       if (!yes) return;
       profiles = profiles.filter((item) => item.id !== profile.id);
-      activeId = profiles[0]?.id || null;
+      activeId = null;
       saveProfiles(profiles);
-      render();
+      navigate('people');
     } });
     const transcript = renderMessages(profile, memoryById);
     const composer = el('textarea', { class: 'input people-composer-input', rows: 2, maxlength: 900, placeholder: `问一件与${profile.name}有关、且可以从回忆中核对的事…`, 'aria-label': '输入回忆问题' });
@@ -451,41 +468,85 @@ export async function mountPeopleView(container) {
     ]);
   }
 
-  function render() {
-    const list = el('aside', { class: 'people-list-panel card' });
-    const listHeader = el('div', { class: 'people-list-heading' }, [
-      el('div', {}, [el('h2', { text: '人物档案' }), el('p', { text: `${profiles.length} 份本地档案` })]),
-      el('button', { class: 'btn btn-primary btn-sm', type: 'button', text: '+ 新建', onClick: () => openProfileEditor() }),
+  function fileIllustration(name = '', index = 0) {
+    return el('span', { class: 'people-file-art', dataset: { tone: index % 3 }, 'aria-hidden': 'true' }, [
+      el('span', { class: 'people-file-tab' }),
+      el('span', { class: 'people-file-sheet' }, [
+        el('span', { class: 'people-file-caption', text: '人物 · 回忆' }),
+        el('span', { class: 'people-file-portrait', text: name.slice(0, 1) || '人' }),
+        el('span', { class: 'people-file-lines' }, [el('i'), el('i'), el('i')]),
+        el('span', { class: 'people-file-stamp', text: '模拟档案' }),
+      ]),
     ]);
-    const rows = el('div', { class: 'people-list-rows' });
-    if (!profiles.length) rows.append(el('div', { class: 'people-list-empty', text: '创建代号档案，开始整理回忆。' }));
-    for (const profile of profiles) {
-      rows.append(el('button', { class: `people-list-item${profile.id === activeId ? ' is-active' : ''}`, type: 'button', onClick: () => { activeId = profile.id; render(); } }, [
-        el('span', { class: 'people-list-avatar', text: profile.name.slice(0, 1) || '人' }),
-        el('span', { class: 'people-list-copy' }, [el('strong', { text: profile.name }), el('small', { text: `${profile.memories.length} 条回忆` })]),
-      ]));
-    }
-    list.append(listHeader, rows, el('div', { class: 'people-list-footnote', text: '档案只保存在本机浏览器。删除档案会一并删除其回忆和对话。' }));
+  }
 
+  function renderGallery() {
+    const cards = [el('a', { class: 'people-archive-card people-create-card', href: '#people/new' }, [
+      el('span', { class: 'people-create-art', 'aria-hidden': 'true' }, [el('span', { class: 'people-create-plus', html: icon('plus', 32) })]),
+      el('span', { class: 'people-archive-copy' }, [
+        el('strong', { text: '新建空白' }),
+        el('span', { class: 'people-archive-description', text: '从一份空白档案，开始珍藏回忆' }),
+      ]),
+      el('span', { class: 'people-archive-footer' }, [el('span', { text: '创建人物档案' }), el('span', { html: icon('arrow-right', 16), 'aria-hidden': 'true' })]),
+    ])];
+    profiles.forEach((profile, index) => cards.push(el('a', {
+      class: 'people-archive-card', href: `#${profilePath(profile)}`, 'aria-label': `打开${profile.name}的档案`,
+    }, [
+      fileIllustration(profile.name, index),
+      el('span', { class: 'people-archive-copy' }, [
+        el('strong', { text: profile.name }),
+        el('span', { class: 'people-archive-description', text: profile.context || '关系与背景，等待慢慢补充' }),
+      ]),
+      el('span', { class: 'people-archive-footer' }, [
+        el('span', { text: `${profile.memories.length} 条回忆` }),
+        el('time', { datetime: new Date(profile.updatedAt).toISOString(), text: dateLabel(profile.updatedAt) }),
+      ]),
+    ])));
+    return el('div', { class: 'people-gallery' }, [
+      el('div', { class: 'people-gallery-heading' }, [el('h2', { text: '全部档案' }), el('span', { text: `${profiles.length} 份` })]),
+      el('div', { class: 'people-archive-grid' }, cards),
+    ]);
+  }
+
+  function render() {
+    if (disposed) return;
+    const parts = currentSection.split('/');
+    const isGallery = currentSection === 'overview';
+    const isNew = currentSection === 'new';
+    let requestedId = '';
+    try { requestedId = decodeURIComponent(parts[0]); } catch { /* Show the missing-profile state for malformed links. */ }
+    activeId = isGallery || isNew ? null : requestedId;
     const profile = activeProfile();
-    const main = profile
-      ? renderDetail(profile)
-      : el('section', { class: 'people-welcome card' }, [
-        el('span', { class: 'people-welcome-icon', text: '◌' }),
-        el('h2', { text: '整理一份有证据的回忆档案' }),
-        el('p', { text: '从代号、背景和表达观察开始，再逐条添加你主动提供的回忆。对话模拟会引用已保存材料，并标明不确定之处。' }),
-        el('button', { class: 'btn btn-primary', type: 'button', text: '创建人物档案', onClick: () => openProfileEditor() }),
-        el('small', { text: '不会自动读取聊天软件、联系人或照片。' }),
-      ]);
+    const isEditing = !!profile && parts[1] === 'edit';
+    const title = isGallery ? '人物档案' : isNew ? '新建人物档案' : isEditing ? '编辑人物档案' : profile?.name || '档案未找到';
+    const breadcrumb = el('nav', { class: 'people-breadcrumb', 'aria-label': '人物档案导航' }, [
+      el('a', { href: '#people', text: '人物档案' }),
+      el('span', { text: '/', 'aria-hidden': 'true' }),
+      ...(isEditing ? [el('a', { href: `#${profilePath(profile)}`, text: profile.name }), el('span', { text: '/', 'aria-hidden': 'true' })] : []),
+      el('span', { text: isNew ? '新建空白' : isEditing ? '编辑档案' : profile?.name || '档案未找到', 'aria-current': 'page' }),
+    ]);
+    const content = isGallery ? renderGallery() : (isNew || isEditing) ? renderProfileEditor(isEditing ? profile : null) : profile ? renderDetail(profile) : el('div', { class: 'empty' }, [
+      el('div', { class: 'empty-title', text: '这份档案不存在或已被删除' }),
+      el('a', { class: 'btn btn-soft', href: '#people', text: '返回人物档案' }),
+    ]);
     container.replaceChildren(el('div', { class: 'page people-page' }, [
       el('header', { class: 'page-header people-page-header' }, [
-        el('div', {}, [el('h1', { class: 'page-title', text: '人物回忆' }), el('p', { class: 'page-sub', text: '把记忆、观察与模拟表达分开保存，让每段回答都能回到来源。' })]),
+        el('div', { class: 'people-heading-copy' }, [
+          isGallery ? null : breadcrumb,
+          el('h1', { class: 'page-title', text: title }),
+          el('p', { class: 'page-sub', text: isGallery ? '把一个人的背景、片段与回忆，收进一份档案。' : isNew || isEditing ? '写下你愿意留存的信息，之后也可以随时补充。' : '从档案里的记忆出发，回看每一段有来源的经历。' }),
+        ]),
         el('span', { class: 'people-local-badge', text: '本地档案' }),
       ]),
-      el('div', { class: 'people-page-body' }, [list, main]),
+      el('div', { class: `people-page-body${profile && !isEditing ? ' is-detail' : ''}` }, [content]),
     ]));
   }
 
   render();
-  return () => {};
+  const cleanup = () => { disposed = true; };
+  cleanup.setSection = (next) => {
+    currentSection = next;
+    render();
+  };
+  return cleanup;
 }

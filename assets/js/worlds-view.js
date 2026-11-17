@@ -8,6 +8,7 @@ const MAX_WORLDS = 30;
 const MAX_AGENTS = 8;
 const MAX_MEMORIES_PER_AGENT = 300;
 const MAX_WORLD_MESSAGES = 600;
+const MAX_PERSONA_LENGTH = 2600;
 
 function id(prefix = 'world') {
   return `${prefix}_${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
@@ -33,8 +34,10 @@ function cleanAgent(agent) {
     id: String(agent.id),
     name: String(agent.name).slice(0, 32),
     avatar: String(agent.avatar || '🧩').slice(0, 8),
-    persona: String(agent.persona || '').slice(0, 2400),
+    persona: String(agent.persona || '').slice(0, MAX_PERSONA_LENGTH),
     linkedPersonId: String(agent.linkedPersonId || ''),
+    sourcePersonId: String(agent.sourcePersonId || ''),
+    sourcePersonName: String(agent.sourcePersonName || '').slice(0, 32),
     memories: (Array.isArray(agent.memories) ? agent.memories : []).map(cleanMemory).filter(Boolean).slice(0, MAX_MEMORIES_PER_AGENT),
     createdAt: Number(agent.createdAt) || Date.now(),
   };
@@ -87,6 +90,13 @@ function readPeopleProfiles() {
           eventDate: eventTime ? localDate(eventTime) : '',
           createdAt: Number(memory.createdAt) || 0,
           updatedAt: Number(memory.updatedAt) || 0,
+          revisions: (Array.isArray(memory.revisionHistory) ? memory.revisionHistory : []).filter((revision) => revision && typeof revision === 'object').slice(-8).map((revision) => ({
+            content: String(revision.content || '').slice(0, 1400),
+            quote: String(revision.quote || '').slice(0, 1000),
+            source: String(revision.source || '人物档案').slice(0, 80),
+            eventDate: revision.eventTime ? localDate(revision.eventTime) : '',
+            revisedAt: Number(revision.revisedAt) || 0,
+          })),
         };
       }),
     }));
@@ -258,7 +268,7 @@ function openWorldForm(existing, onSave) {
 function openAgentForm(existing, onSave) {
   const name = el('input', { class: 'input', type: 'text', maxlength: 32, placeholder: '智能体在平行世界中的名字', value: existing?.name || '' });
   const avatar = el('input', { class: 'input world-agent-emoji', type: 'text', maxlength: 8, value: existing?.avatar || '🧩', 'aria-label': '头像表情' });
-  const persona = el('textarea', { class: 'input', rows: 6, maxlength: 2400, placeholder: '单独设置这个智能体的身份、观点风格、表达习惯和互动边界。不要把其他成员的记忆写在这里。', value: existing?.persona || '' });
+  const persona = el('textarea', { class: 'input world-agent-persona', rows: 6, maxlength: MAX_PERSONA_LENGTH, placeholder: '单独设置这个智能体的身份、观点风格、表达习惯和互动边界。不要把其他成员的记忆写在这里。', value: existing?.persona || '', 'aria-label': '人格设定' });
   const profiles = readPeopleProfiles();
   const linkedPerson = el('select', { class: 'input' }, [el('option', { value: '' }, '不关联人物档案')]);
   for (const profile of profiles) linkedPerson.append(el('option', { value: profile.id }, `${profile.name} · ${profile.memories.length} 条回忆`));
@@ -266,33 +276,102 @@ function openAgentForm(existing, onSave) {
     linkedPerson.append(el('option', { value: existing.linkedPersonId }, '原关联档案已不存在'));
   }
   linkedPerson.value = existing?.linkedPersonId || '';
-  const body = el('div', { class: 'world-form' }, [
+  let creationMode = 'manual';
+  let manualDraft = null;
+  let archiveDraft = null;
+  const archiveSelect = el('select', { class: 'input world-archive-select', 'aria-label': '选择人物档案', disabled: !profiles.length }, [
+    el('option', { value: '', text: profiles.length ? '请选择一份人物档案' : '暂无人物档案' }),
+    ...profiles.map((profile) => el('option', { value: profile.id, text: `${profile.name} · ${profile.memories.length} 条回忆` })),
+  ]);
+  const archivePreview = el('div', { class: 'world-archive-preview', role: 'status' });
+  const archivePanel = el('section', { class: 'world-archive-source', hidden: true }, [
+    el('label', { class: 'world-field' }, [el('span', { text: '选择人物档案' }), archiveSelect]),
+    archivePreview,
+    profiles.length ? null : el('a', { class: 'btn btn-soft btn-sm', href: '#people/new', text: '去创建人物档案', onClick: () => dialog.close() }),
+  ]);
+  const linkPanel = el('div', { class: 'world-form' }, [
+    el('label', { class: 'world-field' }, [el('span', { text: '关联人物档案（可选）' }), linkedPerson]),
+    el('p', { class: 'world-privacy-note', text: profiles.length
+      ? '关联后可只读检索档案中的回忆；档案的后续修订会在下一轮生效。'
+      : '还没有可关联的人物档案。可先到「人物档案」创建，再回来选择。' }),
+  ]);
+  const saveButton = el('button', { class: 'btn btn-primary', type: 'button', text: existing ? '保存设定' : '添加成员', onClick: () => {
+    const sourceProfile = profiles.find((profile) => profile.id === archiveSelect.value);
+    if (creationMode === 'archive' && !sourceProfile) return toast('请先选择一份人物档案。', 'warning');
+    if (!name.value.trim()) {
+      toast('请填写智能体名称。', 'warning');
+      name.focus();
+      return;
+    }
+    let values = { name: name.value.trim(), avatar: avatar.value.trim() || '🧩', persona: persona.value.trim(), linkedPersonId: linkedPerson.value };
+    if (creationMode === 'archive') {
+      if (!readPeopleProfiles().some((profile) => profile.id === sourceProfile.id)) return toast('这份人物档案已被删除，请重新选择。', 'warning');
+      values = {
+        ...values, linkedPersonId: '', sourcePersonId: sourceProfile.id, sourcePersonName: sourceProfile.name,
+        memories: sourceProfile.memories.map((memory) => cleanMemory({ ...memory, id: id('memory'), revisions: memory.revisions.map((revision) => ({ ...revision })) })),
+      };
+    }
+    if (onSave(values) !== false) dialog.close();
+  } });
+  const draft = () => ({ name: name.value, avatar: avatar.value, persona: persona.value, linkedPersonId: linkedPerson.value });
+  const restoreDraft = (value) => {
+    name.value = value?.name || '';
+    avatar.value = value?.avatar || '🧩';
+    persona.value = value?.persona || '';
+    linkedPerson.value = value?.linkedPersonId || '';
+  };
+  function renderArchivePreview() {
+    const profile = profiles.find((item) => item.id === archiveSelect.value);
+    archivePreview.replaceChildren(
+      el('strong', { text: profile ? `${profile.name} · ${profile.memories.length} 条回忆` : profiles.length ? '选择档案后，自动填入姓名与人格' : '先创建一份人物档案' }),
+      el('p', { text: '复制关系背景、表达风格和回忆（含来源、日期与修订记录）。创建后独立保存，可继续编辑。' }),
+    );
+    saveButton.disabled = creationMode === 'archive' && !profile;
+  }
+  archiveSelect.addEventListener('change', () => {
+    const profile = profiles.find((item) => item.id === archiveSelect.value);
+    name.value = profile?.name || '';
+    avatar.value = profile ? '👤' : '🧩';
+    persona.value = profile ? [
+      `角色代号：${profile.name}`,
+      profile.context ? `关系与背景：${profile.context}` : '',
+      profile.voice ? `表达风格观察：${profile.voice}` : '',
+    ].filter(Boolean).join('\n\n') : '';
+    renderArchivePreview();
+  });
+  const modeButtons = ['manual', 'archive'].map((mode) => el('button', {
+    class: `world-agent-source-button${mode === 'manual' ? ' is-active' : ''}`, type: 'button',
+    'aria-pressed': String(mode === 'manual'), dataset: { mode }, text: mode === 'manual' ? '手动创建' : '从人物档案创建',
+    onClick: () => {
+      if (mode === creationMode) return;
+      if (creationMode === 'manual') manualDraft = draft();
+      else archiveDraft = draft();
+      creationMode = mode;
+      restoreDraft(mode === 'manual' ? manualDraft : archiveDraft);
+      archivePanel.hidden = mode !== 'archive';
+      linkPanel.hidden = mode === 'archive';
+      modeButtons.forEach((button) => {
+        button.classList.toggle('is-active', button.dataset.mode === mode);
+        button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+      });
+      renderArchivePreview();
+    },
+  }));
+  const body = el('div', { class: 'world-form world-agent-form' }, [
+    existing ? null : el('div', { class: 'world-agent-source-modes', role: 'group', 'aria-label': '成员创建方式' }, modeButtons),
+    existing ? null : archivePanel,
     el('div', { class: 'world-field-grid' }, [
       el('label', { class: 'world-field' }, [el('span', { text: '智能体名称' }), name]),
       el('label', { class: 'world-field' }, [el('span', { text: '头像表情' }), avatar]),
     ]),
     el('label', { class: 'world-field' }, [el('span', { text: '人格设定' }), persona]),
-    el('label', { class: 'world-field' }, [el('span', { text: '关联「人物回忆」档案' }), linkedPerson]),
-    el('p', { class: 'world-privacy-note', text: profiles.length
-      ? '关联后，该成员可在回复时检索档案中的相关回忆。档案内容只读引用，不会复制到成员独立记忆库；你在「人物回忆」中的修订会在下一轮生效。'
-      : '还没有可关联的人物档案。请先到「人物回忆」创建档案；关联后可检索其回忆，档案内容仍只在原页面编辑。' }),
+    linkPanel,
   ]);
   let dialog;
   dialog = modal({
     title: existing ? '编辑智能体' : '添加智能体',
     body,
-    footer: [
-      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => dialog.close() }, '取消'),
-      el('button', { class: 'btn btn-primary', type: 'button', text: existing ? '保存设定' : '添加成员', onClick: () => {
-        if (!name.value.trim()) {
-          toast('请填写智能体名称。', 'warning');
-          name.focus();
-          return;
-        }
-        onSave({ name: name.value.trim(), avatar: avatar.value.trim() || '🧩', persona: persona.value.trim(), linkedPersonId: linkedPerson.value });
-        dialog.close();
-      } }),
-    ],
+    footer: [el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => dialog.close() }, '取消'), saveButton],
     wide: true,
   });
 }
@@ -365,10 +444,11 @@ export async function mountWorldsView(container) {
   function addAgent(world) {
     if (world.agents.length >= MAX_AGENTS) return toast(`每个世界最多添加 ${MAX_AGENTS} 位智能体。`, 'warning');
     openAgentForm(null, (values) => {
-      const agent = { id: id('agent'), ...values, memories: [], createdAt: Date.now() };
+      const agent = { id: id('agent'), memories: [], ...values, createdAt: Date.now() };
       world.agents.push(agent);
-      persist(world);
+      if (!persist(world)) { world.agents.pop(); return false; }
       render();
+      toast(values.sourcePersonId ? `已从「${values.sourcePersonName}」创建成员，带入 ${agent.memories.length} 条回忆。` : '成员已添加。', 'success');
     });
   }
 
@@ -446,8 +526,8 @@ export async function mountWorldsView(container) {
 
       if (!agent.linkedPersonId) {
         archiveList.append(el('div', { class: 'world-memory-empty' }, [
-          el('strong', { text: '尚未关联人物档案' }),
-          el('p', { text: '在成员「人格」设置中选择一份「人物回忆」档案，即可让该成员检索其中的相关回忆。' }),
+          el('strong', { text: agent.sourcePersonId ? `已从「${agent.sourcePersonName || '人物档案'}」复制回忆` : '尚未关联人物档案' }),
+          el('p', { text: agent.sourcePersonId ? '复制的回忆保存在上方独立记忆库，可在这里编辑；原档案的后续修改不会自动覆盖成员记忆。' : '在成员「人格」设置中选择一份人物档案，即可让该成员检索其中的相关回忆。' }),
         ]));
       } else if (!linkedProfile) {
         archiveList.append(el('div', { class: 'world-memory-empty' }, [
@@ -457,7 +537,7 @@ export async function mountWorldsView(container) {
       } else if (!linkedProfile.memories.length) {
         archiveList.append(el('div', { class: 'world-memory-empty' }, [
           el('strong', { text: `${linkedProfile.name} 的人物档案还没有回忆` }),
-          el('p', { text: '请到「人物回忆」中添加或修订档案内容；此处只读引用，不会复制或修改档案。' }),
+          el('p', { text: '请到「人物档案」中添加或修订档案内容；此处只读引用，不会复制或修改档案。' }),
         ]));
       } else {
         for (const memory of linkedProfile.memories.slice().sort((a, b) => Number(b.eventTime || 0) - Number(a.eventTime || 0))) {
@@ -467,7 +547,7 @@ export async function mountWorldsView(container) {
             memory.quote ? el('blockquote', { text: `原始片段：“${memory.quote}”` }) : null,
           ]));
         }
-        archiveList.append(el('p', { class: 'world-privacy-note' }, `以上是「${linkedProfile.name}」档案的当前内容，只读展示。编辑和修订请前往「人物回忆」；下一轮推演会读取最新版本。`));
+        archiveList.append(el('p', { class: 'world-privacy-note' }, `以上是「${linkedProfile.name}」档案的当前内容，只读展示。编辑和修订请前往「人物档案」；下一轮推演会读取最新版本。`));
       }
     };
 
@@ -516,7 +596,7 @@ export async function mountWorldsView(container) {
       fileInput,
       el('h3', { class: 'world-memory-section-title', text: '成员独立记忆 · 可编辑' }),
       list,
-      el('h3', { class: 'world-memory-section-title', text: '关联人物档案 · 只读调用' }),
+      el('h3', { class: 'world-memory-section-title', text: agent.sourcePersonId && !agent.linkedPersonId ? '档案来源 · 独立副本' : '关联人物档案 · 只读调用' }),
       archiveList,
     );
     const dialog = modal({
@@ -609,7 +689,7 @@ export async function mountWorldsView(container) {
               el('small', { text: `${agent.memories.length} 条独立记忆` }),
               el('small', { class: 'world-member-linked-profile', text: agent.linkedPersonId
                 ? (profilesById.has(agent.linkedPersonId) ? `人物档案：${profilesById.get(agent.linkedPersonId).name}` : '人物档案：不可用')
-                : '未关联人物档案' }),
+                : agent.sourcePersonId ? `来自档案：${agent.sourcePersonName || '人物档案'} · 独立副本` : '未关联人物档案' }),
             ]),
             el('label', { class: 'world-participate' }, [participate, el('span', { text: '发言' })]),
           ]),
@@ -624,7 +704,7 @@ export async function mountWorldsView(container) {
 
       memberHost.replaceChildren(
         el('header', { class: 'world-panel-heading' }, [
-          el('div', {}, [el('h2', { text: '世界成员' }), el('p', { text: '独立人格与记忆，可关联人物回忆档案' })]),
+          el('div', {}, [el('h2', { text: '世界成员' }), el('p', { text: '可手动创建，或从人物档案带入人格与记忆' })]),
           el('button', { class: 'btn btn-primary btn-sm', type: 'button', text: '+ 添加', onClick: () => addAgent(world) }),
         ]),
         el('div', { class: 'world-member-list' }, rows),

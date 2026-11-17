@@ -122,6 +122,16 @@
 .world-field .input { width: 100%; min-width: 0; font-size: 12px; font-weight: 400; line-height: 1.55; resize: vertical; }
 .world-field-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(150px, 1fr); gap: 12px; }
 .world-agent-emoji { max-width: 160px; }
+.world-agent-source-modes { display: flex; gap: 6px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel-2); }
+.world-agent-source-button { flex: 1; padding: 10px 8px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--text-2); font-size: 12px; font-weight: 600; cursor: pointer; }
+.world-agent-source-button.is-active { border-color: var(--accent-ring); background: var(--bg-panel); color: var(--accent-strong); box-shadow: var(--shadow-xs); }
+.world-agent-source-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.world-archive-source { display: grid; gap: 12px; }
+.world-archive-preview { padding: 12px 14px; border: 1px solid var(--accent-ring); border-radius: 12px; background: var(--accent-softer); }
+.world-archive-preview strong { color: var(--text-1); font-size: 12px; }
+.world-archive-preview p { margin-top: 5px; color: var(--text-2); font-size: 11px; line-height: 1.65; }
+.world-archive-source > a { justify-self: start; text-decoration: none; }
+.world-agent-form .world-agent-persona { height: auto; min-height: 136px; }
 .world-privacy-note { padding: 9px 11px; border: 1px solid var(--accent-ring); border-radius: 10px; background: var(--accent-softer); color: var(--text-2); font-size: 10px; line-height: 1.55; }
 
 .world-memory-manager { display: grid; gap: 10px; }

@@ -1,6 +1,6 @@
 {
   "name": "jiuban",
-  "version": "1.11.0",
+  "version": "1.16.0",
   "private": true,
   "type": "module",
   "description": "久伴 · 桌面端聊天网页应用（长期记忆 + 平行世界群聊）",
@@ -9,7 +9,12 @@
     "start:local": "HOST=127.0.0.1 node serve.mjs",
     "desktop": "electron .",
     "dist:win": "electron-builder --win nsis --x64",
-    "dist:mac": "electron-builder --mac dmg --arm64"
+    "dist:mac": "electron-builder --mac dmg --arm64",
+    "memory:service": "node memory-service/server.mjs",
+    "memory:test": "node memory-service/test/core.test.mjs && node memory-service/test/server.test.mjs",
+    "memory:bench": "node memory-service/test/bench.mjs",
+    "dev": "node start-all.mjs",
+    "start:all": "node start-all.mjs"
   },
   "main": "desktop/main.cjs",
   "build": {

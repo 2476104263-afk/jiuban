@@ -1,0 +1,8 @@
+{
+  "name": "jiuban-chat-database",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "vendor": "node vendor.mjs", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "sql.js": "1.13.0", "fzstd": "0.1.1" }
+}

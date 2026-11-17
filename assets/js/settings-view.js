@@ -7,7 +7,7 @@ import { store, subscribe } from './store.js';
 import { el, icon, toast, confirmDialog } from './util.js';
 import { openApiKeyDialog } from './api-key-dialog.js';
 
-const APP_VERSION = 'v1.11.0';
+const APP_VERSION = 'v1.16.0';
 
 function iconSpan(name, size = 16, className = 'settings-icon') {
   return el('span', { class: className, html: icon(name, size) });

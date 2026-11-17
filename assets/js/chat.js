@@ -5,9 +5,9 @@
 
 import { store, subscribe } from './store.js';
 import { getGroupMembers, getPersona } from './data.js';
-import { getUserProfile } from './user-profile.js?v=1.9.4';
-import { languageStylePrompt } from './language-style.js?v=1.9.5';
-import { addManualMemory, COMPANION_MEMORY_SCOPE, getCognitionState, getCheckpoint, memoryEnabled, memoryPrompt, rememberExplicitMessage, retrieveMemories, saveMemoryCandidates, setCheckpoint } from './memory.js?v=1.9.9';
+import { getUserProfile } from './user-profile.js?v=1.16.0';
+import { languageStylePrompt } from './language-style.js?v=1.16.0';
+import { addManualMemory, COMPANION_MEMORY_SCOPE, getCognitionState, getCheckpoint, memoryEnabled, memoryPrompt, rememberExplicitMessage, retrieveMemories, saveMemoryCandidates, setCheckpoint } from './memory.js?v=1.16.0';
 import {
   $,
   $$,
@@ -245,7 +245,7 @@ function updateComposerHint() {
 
 async function openApiKeyDialog() {
   try {
-    const mod = await import('./api-key-dialog.js?v=1.6.0');
+    const mod = await import('./api-key-dialog.js?v=1.16.0');
     if (typeof mod.openApiKeyDialog === 'function') mod.openApiKeyDialog();
   } catch (err) {
     console.error('[jiuban] 打开连接窗口失败', err);
@@ -814,7 +814,7 @@ async function startReply(convId) {
 async function ensureApi() {
   if (apiApi) return true;
   try {
-    apiApi = await import('./api.js?v=1.6.0');
+    apiApi = await import('./api.js?v=1.16.0');
     return typeof apiApi.streamCompletion === 'function';
   } catch (err) {
     console.warn('[jiuban] api.js 加载失败', err);
