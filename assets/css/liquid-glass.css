@@ -1,0 +1,292 @@
+/* Memora · Liquid Glass
+ * 原生材质层；研究与取舍见 docs/liquid-glass-design.md。
+ * 模糊和折射仅作用于背景，正文始终保持清晰。
+ */
+:root {
+  --accent: #3485e7;
+  --accent-strong: #2067c5;
+  --accent-deep: #1554a8;
+  --accent-soft: rgba(69, 137, 228, .12);
+  --accent-softer: rgba(69, 137, 228, .065);
+  --accent-ring: rgba(57, 123, 218, .23);
+  --text-1: #202c40;
+  --text-2: #4c5f78;
+  --text-3: #5d7089;
+  --text-link: #2067c5;
+  --bg-app: #edf2fa;
+  --bg-panel: rgba(255, 255, 255, .68);
+  --bg-panel-2: rgba(244, 248, 255, .48);
+  --bg-chat: transparent;
+  --bg-elevated: rgba(255, 255, 255, .8);
+  --bg-input: rgba(249, 252, 255, .64);
+  --bg-input-focus: rgba(255, 255, 255, .92);
+  --bg-hover: rgba(255, 255, 255, .5);
+  --bg-active: rgba(79, 142, 225, .13);
+  --bg-mask: rgba(36, 51, 79, .22);
+  --border: rgba(105, 128, 165, .16);
+  --border-strong: rgba(93, 121, 165, .25);
+  --divider: rgba(102, 124, 157, .13);
+  --radius-sm: 10px;
+  --radius-md: 13px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --glass-blur: 22px;
+  --glass-edge: rgba(255, 255, 255, .88);
+  --glass-surface: rgba(255, 255, 255, .61);
+  --glass-highlight: radial-gradient(ellipse at var(--glass-x, 20%) var(--glass-y, 0%), rgba(255, 255, 255, .82), rgba(255, 255, 255, .08) 64%);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 1px 0 0 rgba(255, 255, 255, .56), inset 0 -1px 0 rgba(112, 141, 185, .11), 0 8px 28px rgba(51, 76, 119, .065), 0 2px 5px rgba(51, 76, 119, .035);
+  --shadow-xs: 0 1px 4px rgba(41, 68, 110, .05);
+  --shadow-sm: 0 4px 16px rgba(41, 68, 110, .065);
+  --shadow-md: 0 12px 36px rgba(41, 68, 110, .1);
+  --shadow-lg: 0 28px 80px rgba(32, 53, 88, .2);
+  --shadow-accent: inset 0 1px 0 rgba(255, 255, 255, .4), 0 5px 14px rgba(41, 106, 195, .19);
+  --bubble-in-bg: rgba(255, 255, 255, .74);
+  --bubble-in-border: rgba(255, 255, 255, .88);
+  --bubble-in-text: #202c40;
+  --bubble-out-bg: linear-gradient(145deg, #2e72c8, #215fb2);
+  --bubble-out-text: #fff;
+}
+
+.wallpaper {
+  background:
+    radial-gradient(ellipse at 4% 4%, rgba(138, 200, 246, .46), transparent 51%),
+    radial-gradient(ellipse at 97% 26%, rgba(193, 176, 241, .34), transparent 48%),
+    radial-gradient(ellipse at 40% 100%, rgba(158, 222, 219, .3), transparent 48%),
+    linear-gradient(140deg, #edf4fb, #f3f3fb 57%, #eaf1fa);
+}
+
+.app-shell,
+.main-pane,
+.view-root,
+.page,
+.memory-hub,
+.messages { background: transparent; }
+
+/* 一层清透的导航玻璃；图标保持线性镂空。 */
+.rail {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .57), rgba(244, 250, 255, .3));
+  border-right: 1px solid rgba(255, 255, 255, .8);
+  box-shadow: inset -1px 0 0 rgba(106, 135, 178, .1), 3px 0 20px rgba(61, 87, 129, .025);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+}
+
+.rail-btn {
+  border: 1px solid transparent;
+  color: #526680;
+  transition: color .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease), transform .2s var(--ease);
+}
+
+.rail-btn:hover {
+  background: rgba(255, 255, 255, .48);
+  border-color: rgba(255, 255, 255, .72);
+  box-shadow: inset 0 1px 0 #fff, 0 3px 10px rgba(69, 101, 146, .06);
+  transform: translateY(-1px);
+}
+
+.rail-btn.is-active {
+  color: var(--accent-strong);
+  border-color: rgba(66, 126, 205, .34);
+  background: radial-gradient(ellipse at var(--glass-x, 25%) var(--glass-y, 0%), rgba(255, 255, 255, .94), rgba(219, 236, 255, .48));
+  box-shadow: inset 0 1px 1px #fff, inset 0 -1px 2px rgba(72, 130, 203, .1), 0 3px 12px rgba(58, 105, 168, .1);
+}
+
+.rail-project-icon { width: 27px; height: 27px; border-radius: 50%; }
+.rail-avatar { background: linear-gradient(145deg, rgba(255, 255, 255, .93), rgba(204, 230, 252, .62)); border-color: rgba(255, 255, 255, .8); box-shadow: var(--glass-shadow); }
+.rail-avatar .presence { border-color: #edf5fb; }
+
+/* 主要容器采用同一套折光边缘、背景模糊和内侧高光。 */
+.chat-head,
+.composer-input-row,
+.card,
+.memory-card,
+.page-header,
+.memory-hub-header,
+.memory-cognition-nav,
+.people-archive-card,
+.world-header,
+.world-list-panel,
+.world-chat-panel,
+.world-members-panel,
+.people-chat-panel,
+.people-evidence-panel,
+.modal,
+.emoji-popover,
+.boot-warning-card {
+  border-color: var(--glass-edge);
+  background-color: var(--glass-surface);
+  background-image: var(--glass-highlight);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(155%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(155%);
+}
+
+.chat-head { border-radius: 23px; padding-top: 12px; padding-bottom: 12px; }
+.page-header { border-bottom-color: rgba(255, 255, 255, .7); }
+.memory-hub-header { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7); }
+.memory-cognition-nav { background-color: rgba(255, 255, 255, .32); box-shadow: none; }
+.page-header,
+.memory-hub-header,
+.memory-cognition-nav { background-image: linear-gradient(120deg, rgba(255, 255, 255, .35), transparent); }
+.people-page-header,
+.worlds-page-header,
+.diary-page-header { background-color: rgba(255, 255, 255, .23); }
+.memory-hub-link { border-radius: 999px; }
+.memory-hub-link.is-active { border-color: rgba(255, 255, 255, .9); background: rgba(255, 255, 255, .76); box-shadow: var(--glass-shadow); }
+
+.chat-experience { margin: 9px var(--feature-content-gutter) 0; padding: 7px 3px; border-bottom: 0; }
+.chat-experience > summary { color: var(--text-2); font-size: 12px; }
+.chat-experience[open] { padding-bottom: 10px; }
+.composer { padding-top: 12px; }
+.composer-input-row { position: relative; border-radius: 24px; background-color: rgba(255, 255, 255, .77); }
+.composer-input-row:focus-within { border-color: rgba(71, 133, 216, .42); background-color: rgba(255, 255, 255, .83); box-shadow: var(--glass-shadow), 0 0 0 3px rgba(93, 155, 230, .1); }
+.composer.is-dragover .composer-input-row { border-color: var(--accent); background-color: rgba(226, 242, 255, .94); }
+
+/* 折射环与文字分层；移动端、Safari 等采用同样的高光轮廓。 */
+.chat-head::before,
+.composer-input-row::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(130deg, rgba(255, 255, 255, .96), rgba(169, 211, 248, .2) 38%, rgba(225, 205, 250, .4) 70%, rgba(255, 255, 255, .9));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+[data-glass-refraction="on"] .chat-head::before,
+[data-glass-refraction="on"] .composer-input-row::before {
+  backdrop-filter: url("#memora-glass-refraction") saturate(135%);
+}
+
+.glass-filter-defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+
+/* 长列表中的气泡和证据只保留静态玻璃表面，避免逐条启动模糊合成。 */
+.bubble-in,
+.people-message-bubble,
+.world-bubble,
+.people-evidence-card,
+.world-member-card,
+.world-memory-card,
+.memory-item,
+.diary-entry {
+  border-color: rgba(255, 255, 255, .85);
+  background-color: rgba(255, 255, 255, .73);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 3px 12px rgba(44, 76, 119, .045);
+}
+.msg-bubble { border-radius: 17px; }
+.bubble-in { border-top-left-radius: 7px; }
+.bubble-out { border-top-right-radius: 7px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 4px 12px rgba(48, 112, 201, .16); }
+.day-sep span { background: rgba(255, 255, 255, .48); color: #5c708b; border: 1px solid rgba(255, 255, 255, .65); }
+.demo-banner { background: rgba(255, 248, 232, .63); border-color: rgba(218, 165, 69, .21); }
+.demo-banner-text b { color: #92600b; }
+
+/* 按钮和输入控件：可见边缘、微弹性、明确的键盘焦点。 */
+.btn { border-radius: 11px; }
+.btn-primary,
+.send-btn,
+.api-key-refresh { color: #fff; background: radial-gradient(ellipse at var(--glass-x, 25%) var(--glass-y, 0%), rgba(168, 214, 255, .12), transparent 68%), linear-gradient(145deg, #2869bd, #1c58a5); border: 1px solid rgba(255, 255, 255, .33); box-shadow: var(--shadow-accent); }
+.btn-primary:hover,
+.send-btn:hover,
+.api-key-refresh:hover { background: radial-gradient(ellipse at var(--glass-x, 25%) var(--glass-y, 0%), rgba(168, 214, 255, .12), transparent 68%), linear-gradient(145deg, #2463b5, #19529b); filter: none; }
+.btn-primary:active,
+.send-btn:active { transform: scale(.975); }
+.btn-soft { background: rgba(231, 242, 255, .65); border-color: rgba(255, 255, 255, .76); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8); }
+.input,
+.api-key-input-group { border-color: rgba(107, 133, 170, .2); background-color: rgba(255, 255, 255, .61); box-shadow: inset 0 1px 3px rgba(52, 77, 115, .045), 0 1px 0 rgba(255, 255, 255, .8); }
+.input:focus { border-color: rgba(44, 113, 205, .55); background-color: rgba(255, 255, 255, .92); }
+.api-key-input-group .input { background: transparent; box-shadow: none; }
+select.input option { color: #202c40; background: #f7faff; }
+.btn:focus-visible,
+.send-btn:focus-visible,
+.memory-hub-link:focus-visible { outline: 2px solid #2469c2; outline-offset: 3px; }
+
+.modal-mask { background: var(--bg-mask); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
+.modal { background-color: rgba(247, 251, 255, .9); border: 1px solid rgba(255, 255, 255, .94); border-radius: 26px; box-shadow: var(--glass-shadow), var(--shadow-lg); }
+.modal-foot { background: rgba(255, 255, 255, .23); }
+.toast { background: rgba(35, 51, 76, .88); border: 1px solid rgba(255, 255, 255, .25); -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), var(--shadow-md); }
+.api-chip { background: rgba(255, 255, 255, .49); border: 1px solid rgba(255, 255, 255, .72); }
+.world-composer,
+.people-composer { background: rgba(255, 255, 255, .35); }
+
+/* 小屏降低叠加模糊量，保持滚动与输入流畅。 */
+@media (max-width: 640px) {
+  :root { --glass-blur: 14px; }
+  .rail { -webkit-backdrop-filter: blur(18px) saturate(145%); backdrop-filter: blur(18px) saturate(145%); }
+  .rail-project-icon { width: 25px; height: 25px; }
+  .chat-head { border-radius: 20px; padding-top: 10px; padding-bottom: 10px; }
+  .composer-input-row { border-radius: 22px; }
+  .card,
+  .memory-card,
+  .people-archive-card { -webkit-backdrop-filter: none; backdrop-filter: none; background-color: rgba(255, 255, 255, .78); }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-surface: #f6f9ff; --bg-panel: #f8faff; --bg-panel-2: #eef4fb; --bg-input: #f8faff; }
+  .rail,
+  .modal,
+  .composer-input-row { background-color: #f4f8ff; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-surface: #f7faff; --bg-panel: #f8faff; --bg-panel-2: #edf3fb; --bg-elevated: #fff; --bg-input: #f9fbff; --bubble-in-bg: #fff; }
+  .rail,
+  .chat-head,
+  .card,
+  .memory-card,
+  .page-header,
+  .memory-hub-header,
+  .memory-cognition-nav,
+  .people-archive-card,
+  .world-header,
+  .world-list-panel,
+  .world-chat-panel,
+  .world-members-panel,
+  .people-chat-panel,
+  .people-evidence-panel,
+  .composer-input-row,
+  .modal,
+  .emoji-popover,
+  .toast,
+  .modal-mask { -webkit-backdrop-filter: none; backdrop-filter: none; transition: none; }
+  .page-header,
+  .memory-hub-header,
+  .memory-cognition-nav,
+  .people-archive-card,
+  .world-header,
+  .world-list-panel,
+  .world-chat-panel,
+  .world-members-panel,
+  .people-chat-panel,
+  .people-evidence-panel { background: #f7faff; }
+  .rail { background: #edf3fb; }
+  .modal,
+  .composer-input-row { background: #f8faff; }
+  .composer-input-row:focus-within { background: #f8faff; }
+  .bubble-in { background: #fff; }
+  .toast { background: #23334c; }
+  .chat-head::before,
+  .composer-input-row::before { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .rail-btn:hover,
+  .btn-primary:active,
+  .send-btn:active { transform: none; }
+}
+
+@media (forced-colors: active) {
+  .rail-btn,
+  .card,
+  .chat-head,
+  .composer-input-row,
+  .modal { border: 1px solid CanvasText; box-shadow: none; }
+  .rail-btn.is-active { color: Highlight; border-color: Highlight; }
+  .chat-head::before,
+  .composer-input-row::before { display: none; }
+}

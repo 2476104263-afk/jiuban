@@ -1,9 +1,9 @@
 {
-  "name": "jiuban",
-  "version": "1.16.0",
+  "name": "memora",
+  "version": "1.17.0",
   "private": true,
   "type": "module",
-  "description": "久伴 · 桌面端聊天网页应用（长期记忆 + 平行世界群聊）",
+  "description": "Memora · 桌面端聊天网页应用（长期记忆 + 平行世界群聊）",
   "scripts": {
     "start": "node serve.mjs",
     "start:local": "HOST=127.0.0.1 node serve.mjs",
@@ -19,7 +19,7 @@
   "main": "desktop/main.cjs",
   "build": {
     "appId": "com.jiuban.desktop",
-    "productName": "久伴",
+    "productName": "Memora",
     "directories": {
       "output": "release"
     },
@@ -39,7 +39,7 @@
           ]
         }
       ],
-      "artifactName": "久伴-Setup-${version}-win-${arch}.${ext}"
+      "artifactName": "Memora-Setup-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -56,7 +56,7 @@
           ]
         }
       ],
-      "artifactName": "久伴-${version}-mac-${arch}.${ext}"
+      "artifactName": "Memora-${version}-mac-${arch}.${ext}"
     }
   },
   "homepage": "https://2476104263-afk.github.io/jiuban/",

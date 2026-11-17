@@ -1,6 +1,6 @@
-import { getCognitionState, setCognitionState } from './memory.js?v=1.16.0';
+import { getCognitionState, setCognitionState } from './memory.js?v=1.17.0';
 import { store } from './store.js';
-import { LANGUAGE_STYLES } from './language-style.js?v=1.16.0';
+import { LANGUAGE_STYLES } from './language-style.js?v=1.17.0';
 import { el, toast } from './util.js';
 
 export function createConversationExperience() {
@@ -71,7 +71,7 @@ export function createConversationExperience() {
   renderLanguageStyle();
 
   const cognitionCard = el('section', { class: 'card memory-card memory-cognition-card' }, [
-    el('div', { class: 'memory-card-heading' }, [el('div', {}, [el('h2', { text: '表达状态与对话体验' }), el('p', { text: '拖动滑块调节久伴的表达倾向；这只是回复风格设置，不代表真实情绪。' })]), el('span', { class: 'memory-orb', text: '✦' })]),
+    el('div', { class: 'memory-card-heading' }, [el('div', {}, [el('h2', { text: '表达状态与对话体验' }), el('p', { text: '拖动滑块调节Memora的表达倾向；这只是回复风格设置，不代表真实情绪。' })]), el('span', { class: 'memory-orb', text: '✦' })]),
     el('div', { class: 'cognition-grid' }, cognitionFields),
     el('div', { class: 'memory-conversation-settings' }, [
       el('h3', { text: '对话体验' }),

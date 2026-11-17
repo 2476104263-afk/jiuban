@@ -1,8 +1,8 @@
-import { addManualMemory, COMPANION_MEMORY_SCOPE } from './memory.js?v=1.16.0';
+import { addManualMemory, COMPANION_MEMORY_SCOPE } from './memory.js?v=1.17.0';
 import { el, toast, confirmDialog, download } from './util.js';
 import { detectColumnMapping, parseChatExport, remapChatRecords } from './chat-import.js';
-import { createAnnualReportPanel } from './annual-report-view.js?v=1.16.0';
-import { createChatDatabaseExtractor } from './chat-database-view.js?v=1.16.0';
+import { createAnnualReportPanel } from './annual-report-view.js?v=1.17.0';
+import { createChatDatabaseExtractor } from './chat-database-view.js?v=1.17.0';
 
 const PAGE_SIZE = 40;
 const MAX_SELECTION = 20;
@@ -36,6 +36,10 @@ export async function mountChatImportView(container) {
   let currentPage = 0;
   let sourceRevision = 0;
   const annualReport = createAnnualReportPanel();
+  const annualDisclosure = el('details', { class: 'annual-report-disclosure', hidden: true }, [
+    el('summary', {}, [el('strong', { text: '年度回顾' }), el('span', { text: '把这些对话整理成一份年度报告' })]),
+    annualReport.element,
+  ]);
 
   const fileInput = el('input', { class: 'chat-import-file-input', type: 'file', accept: '.csv,.json,.txt,.md,.log,text/csv,application/json,text/plain', hidden: true });
   const chooseButton = el('button', { class: 'btn btn-primary', type: 'button', text: '选择聊天记录文件', onClick: () => fileInput.click() });
@@ -170,6 +174,7 @@ export async function mountChatImportView(container) {
 
   function setMessages(nextMessages) {
     messages = nextMessages;
+    annualDisclosure.hidden = !messages.length;
     annualReport.setMessages(messages, fileName);
     selected.clear();
     editedTexts.clear();
@@ -316,26 +321,46 @@ export async function mountChatImportView(container) {
     else toast(`已保存 ${saved} 条聊天证据到本机记忆。`, 'success', 2400);
   });
 
+  const fileCard = el('section', { class: 'card chat-import-card chat-import-start' }, [
+    el('div', { class: 'chat-import-card-heading' }, [el('div', {}, [el('h2', { text: '选择聊天导出文件' }), el('p', { text: '支持 CSV、JSON、TXT 和 AI-TXT，文件只在当前浏览器中读取。' })])]),
+    el('div', { class: 'chat-import-file-row' }, [chooseButton, fileLabel]),
+    el('details', { class: 'import-help-disclosure' }, [
+      el('summary', { text: '如何准备聊天记录？' }),
+      el('div', { class: 'chat-import-info' }, [
+        el('span', { text: '先从 WeChatMsg 等工具导出会话，再选择文件。' }),
+        el('span', { text: '预览后勾选需要保留的片段，未勾选的内容不会写入记忆。' }),
+      ]),
+    ]), status,
+  ]);
+  const filePanel = el('div', { class: 'import-source-panel', id: 'import-source-file' }, [fileCard]);
+  const dbPanel = el('div', { class: 'import-source-panel', id: 'import-source-database', hidden: true }, [databaseExtractor.element]);
+  const sourceButtons = ['file', 'database'].map((mode) => el('button', {
+    class: `import-source-button${mode === 'file' ? ' is-active' : ''}`, type: 'button',
+    dataset: { source: mode }, 'aria-pressed': String(mode === 'file'), 'aria-controls': `import-source-${mode}`,
+    text: mode === 'file' ? '导出文件' : '微信数据库',
+    onClick: () => {
+      sourceRevision += 1;
+      if (mode === 'file') databaseExtractor.cancel();
+      filePanel.hidden = mode !== 'file';
+      dbPanel.hidden = mode !== 'database';
+      sourceButtons.forEach(button => {
+        const active = button.dataset.source === mode;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+    },
+  }));
   container.replaceChildren(el('div', { class: 'page chat-import-page' }, [
     el('header', { class: 'page-header chat-import-header' }, [
       el('div', {}, [el('h1', { class: 'page-title', text: '导入聊天记录' }), el('p', { class: 'page-sub', text: '把选定的对话片段转成有来源、可回放的记忆证据。' })]),
       el('span', { class: 'chat-import-local-badge', text: '本地解析' }),
     ]),
     el('div', { class: 'chat-import-body' }, [
-      databaseExtractor.element,
-      el('section', { class: 'card chat-import-card chat-import-start' }, [
-        el('div', { class: 'chat-import-card-heading' }, [el('div', {}, [el('h2', { text: '或导入聊天导出文件' }), el('p', { text: '支持 WeChatMsg 导出的 CSV、JSON、TXT / AI-TXT；数据库文件请使用上方提取入口。' })])]),
-        el('div', { class: 'chat-import-file-row' }, [chooseButton, fileLabel]),
-        el('div', { class: 'chat-import-info' }, [
-          el('span', { text: '① 先在 WeChatMsg 中选择会话和时间范围并导出。' }),
-          el('span', { text: '② 本页面在浏览器内解析文件；不会自动调用大模型或上传内容。' }),
-          el('span', { text: '③ 预览后由你选择要保存的消息，未选择的内容不会进入记忆库。' }),
-        ]),
-        status,
-      ]),
+      el('div', { class: 'import-source-heading' }, [el('h2', { text: '从哪里导入？' }), el('div', { class: 'import-source-control', role: 'group', 'aria-label': '聊天记录来源' }, sourceButtons)]),
+      filePanel, dbPanel,
       mapCard,
-      annualReport.element,
       resultCard,
+      annualDisclosure,
     ]),
     fileInput,
   ]));

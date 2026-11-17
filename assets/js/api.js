@@ -305,7 +305,7 @@ export async function streamCompletion({
       onEvent(event);
     } catch (err) {
       // 回调出错不应中断流，但要在控制台留下记录（不含 Key）
-      console.error('[jiuban] streamCompletion onEvent 回调出错', err);
+      console.error('[Memora] streamCompletion onEvent 回调出错', err);
     }
   };
 

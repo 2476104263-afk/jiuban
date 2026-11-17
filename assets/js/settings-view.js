@@ -1,5 +1,5 @@
 /* ==========================================================================
-   久伴 · 设置页
+   Memora · 设置页
    DeepSeek 连接状态与本地数据说明
    ========================================================================== */
 
@@ -7,7 +7,7 @@ import { store, subscribe } from './store.js';
 import { el, icon, toast, confirmDialog } from './util.js';
 import { openApiKeyDialog } from './api-key-dialog.js';
 
-const APP_VERSION = 'v1.16.0';
+const APP_VERSION = 'v1.17.0';
 
 function iconSpan(name, size = 16, className = 'settings-icon') {
   return el('span', { class: className, html: icon(name, size) });
@@ -99,7 +99,7 @@ export function mountSettingsView(container) {
       apiCard,
       el('div', { class: 'settings-section-title' }, [el('span', { text: '数据保存' }), el('span', { class: 'settings-section-hint', text: '在本机浏览器' })]),
       privacyCard,
-      el('div', { class: 'settings-about' }, [el('span', { text: `久伴 ${APP_VERSION} · 本地运行 · 数据保存在你的浏览器` })]),
+      el('div', { class: 'settings-about' }, [el('span', { text: `Memora ${APP_VERSION} · 本地运行 · 数据保存在你的浏览器` })]),
     ]),
   ]);
   container.append(el('div', { class: 'page settings-page' }, [header, body]));

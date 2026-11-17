@@ -378,6 +378,8 @@ export function toast(message, type = 'info', duration = 2600) {
  * body / footer 可以是 HTML 字符串、Node 或 Node 数组。
  */
 export function modal({ title, body = '', footer = null, wide = false, onClose = null } = {}) {
+  const activeElement = document.activeElement;
+  const previousFocus = activeElement?.closest?.('.action-menu')?.querySelector('summary') || activeElement;
   const mask = el('div', { class: 'modal-mask' });
   const box = el('div', {
     class: `modal${wide ? ' modal-wide' : ''}`,
@@ -406,6 +408,7 @@ export function modal({ title, body = '', footer = null, wide = false, onClose =
     document.removeEventListener('keydown', onKeyDown);
     mask.remove();
     if (typeof onClose === 'function') onClose();
+    if (previousFocus?.isConnected && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
   };
 
   const head = el('div', { class: 'modal-head' }, [

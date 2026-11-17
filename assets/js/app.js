@@ -1,15 +1,17 @@
 /* ==========================================================================
-   jiuban · 应用入口
+   Memora · 应用入口
    启动、视图路由（聊天 / 设置 / 记忆中心 / 人物档案 / 平行世界）
    ========================================================================== */
 
 import { createConversationExperience } from './conversation-experience.js';
-import { $, $$, el, toast } from './util.js';
-import { initUserProfile } from './user-profile.js?v=1.16.0';
+import { $, $$, el, toast, modal } from './util.js';
+import { initUserProfile, getUserProfile } from './user-profile.js?v=1.17.0';
+import { initLiquidGlass } from './liquid-glass.js?v=1.17.0';
+import { initAdaptiveNavigation, updateNavigationContext } from './navigation.js?v=1.17.0';
 
 const VIEWS = new Set(['chat', 'settings', 'memory', 'memory/service', 'memory/import', 'memory/decision', 'diary', 'people', 'worlds']);
 const VIEW_ALIASES = { 'memory-service': 'memory/service', 'chat-import': 'memory/import', decision: 'memory/decision' };
-const ASSET_VERSION = '1.16.0';
+const ASSET_VERSION = '1.17.0';
 
 const PAGE_MODULES = {
   settings: { path: './settings-view.js', mount: 'mountSettingsView' },
@@ -27,6 +29,8 @@ let currentView = null;
 let pageCleanup = null;
 let chatModule = null;
 let pageRevision = 0;
+const pageCache = new Map();
+const navigationPaths = new Map();
 
 /* --------------------------------------------------------------------------
    视图路由
@@ -55,30 +59,20 @@ function syncRail(view) {
     btn.classList.toggle('is-active', active);
     btn.setAttribute('aria-current', active ? 'page' : 'false');
   });
+  updateNavigationContext(view);
 }
 
 function cleanupPage() {
   pageRevision += 1;
-  if (typeof pageCleanup === 'function') {
-    try {
-      pageCleanup();
-    } catch (err) {
-      console.error('[jiuban] 清理页面出错', err);
-    }
-  }
   pageCleanup = null;
-  if (viewRoot) viewRoot.innerHTML = '';
+  // 顶层模块各自保留界面状态，切换时只隐藏；最多缓存五个模块。
+  for (const entry of pageCache.values()) entry.node.hidden = true;
 }
 
 async function ensureChat() {
   if (!chatModule) {
     const mod = await import(`./chat.js?v=${ASSET_VERSION}`);
     chatModule = mod;
-    const experience = el('details', { class: 'chat-experience' }, [
-      el('summary', { text: '表达状态与对话体验' }),
-      createConversationExperience(),
-    ]);
-    chatRoot.querySelector('.chat-head').after(experience);
     if (typeof mod.initChat === 'function') {
       await mod.initChat();
     }
@@ -88,33 +82,42 @@ async function ensureChat() {
 }
 
 async function mountPage(view) {
-  const config = PAGE_MODULES[primaryView(view)];
+  const key = primaryView(view);
+  const config = PAGE_MODULES[key];
   cleanupPage();
   const revision = pageRevision;
   viewRoot.hidden = false;
-  viewRoot.innerHTML =
-    '<div class="view-loading"><span class="spinner"></span><span>正在打开页面…</span></div>';
+  let entry = pageCache.get(key);
+  if (entry) {
+    entry.section = sectionFromView(view);
+    entry.node.hidden = false;
+    pageCleanup = entry.cleanup;
+    entry.cleanup?.setSection?.(entry.section);
+    try { await entry.cleanup?.refresh?.(); }
+    catch (error) { console.warn('[Memora] 刷新页面数据失败', error); }
+    return;
+  }
+  const target = el('div', { class: 'view-page-slot', 'aria-busy': 'true' });
+  target.append(el('div', { class: 'view-loading', role: 'status', text: '正在打开页面…' }));
+  entry = { node: target, cleanup: null, section: sectionFromView(view) };
+  pageCache.set(key, entry);
+  viewRoot.append(target);
   try {
     const mod = await import(`${config.path}?v=${ASSET_VERSION}`);
-    if (revision !== pageRevision) return;
     const mount = mod[config.mount];
     if (typeof mount !== 'function') {
       throw new Error(`页面模块 ${config.path} 缺少导出函数 ${config.mount}`);
     }
-    const target = el('div', { class: 'view-page-slot' });
-    viewRoot.replaceChildren(target);
-    const cleanup = await mount(target, { section: sectionFromView(currentView) });
-    if (revision !== pageRevision) {
-      if (typeof cleanup === 'function') cleanup();
-      return;
-    }
-    pageCleanup = typeof cleanup === 'function' ? cleanup : null;
+    const cleanup = await mount(target, { section: entry.section });
+    entry.cleanup = typeof cleanup === 'function' ? cleanup : null;
+    target.removeAttribute('aria-busy');
+    entry.cleanup?.setSection?.(entry.section);
+    if (primaryView(currentView) === key) pageCleanup = entry.cleanup;
   } catch (err) {
-    if (revision !== pageRevision) return;
-    console.error('[jiuban] 页面加载失败', err);
-    toast(`页面加载失败：${(err && err.message) || '未知错误'}`, 'error', 3600);
-    viewRoot.innerHTML = '';
-    viewRoot.append(
+    console.error('[Memora] 页面加载失败', err);
+    target.removeAttribute('aria-busy');
+    if (revision === pageRevision) toast(`页面加载失败：${(err && err.message) || '未知错误'}`, 'error', 3600);
+    target.replaceChildren(
       el('div', { class: 'view-error-holder' }, [
         el('div', { class: 'empty' }, [
           el('div', { class: 'empty-emoji', text: '🧩' }),
@@ -124,7 +127,12 @@ async function mountPage(view) {
             'button',
             {
               class: 'btn btn-soft',
-              onClick: () => route(view, { force: true }),
+              onClick: () => {
+                entry.cleanup?.();
+                pageCache.delete(key);
+                target.remove();
+                route(view, { force: true });
+              },
             },
             '重新加载'
           ),
@@ -139,6 +147,9 @@ async function route(view, { force = false } = {}) {
   if (!force && currentView === next) return;
   const previous = currentView;
   currentView = next;
+  navigationPaths.set(primaryView(next), next);
+  const cached = pageCache.get(primaryView(next));
+  if (cached) cached.section = sectionFromView(next);
   app.dataset.view = primaryView(next);
   syncRail(next);
 
@@ -156,8 +167,9 @@ async function route(view, { force = false } = {}) {
     chatRoot.hidden = false;
     try {
       await ensureChat();
+      if (currentView === 'chat') updateNavigationContext('chat');
     } catch (err) {
-      console.error('[jiuban] 聊天模块加载失败', err);
+      console.error('[Memora] 聊天模块加载失败', err);
       chatRoot.innerHTML = '';
       chatRoot.append(
         el('div', { class: 'empty', style: { height: '100%' } }, [
@@ -181,7 +193,7 @@ async function openApiKeyWindow() {
     const mod = await import(`./api-key-dialog.js?v=${ASSET_VERSION}`);
     if (typeof mod.openApiKeyDialog === 'function') mod.openApiKeyDialog();
   } catch (err) {
-    console.error('[jiuban] 打开 DeepSeek 连接窗口失败', err);
+    console.error('[Memora] 打开 DeepSeek 连接窗口失败', err);
     toast('连接窗口加载失败，请刷新页面重试', 'error');
   }
 }
@@ -191,12 +203,16 @@ function initRouting() {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
       if (!VIEWS.has(view)) return;
-      if (location.hash === `#${view}`) route(view, { force: true });
-      else location.hash = `#${view}`;
+      const destination = primaryView(currentView || '') === view ? view : navigationPaths.get(view) || view;
+      if (location.hash === `#${destination}`) route(destination, { force: true });
+      else location.hash = `#${destination}`;
     });
   });
   window.addEventListener('hashchange', () => route(viewFromHash(), { force: true }));
   $('#chat-api-status')?.addEventListener('click', openApiKeyWindow);
+  $('#chat-experience-btn')?.addEventListener('click', () => {
+    modal({ title: '对话设置', body: createConversationExperience(), wide: true });
+  });
 }
 
 /* --------------------------------------------------------------------------
@@ -210,23 +226,35 @@ function initGlobalGuards() {
     });
   });
   window.addEventListener('error', (event) => {
-    console.error('[jiuban] 未捕获错误', event.error || event.message);
+    console.error('[Memora] 未捕获错误', event.error || event.message);
   });
   window.addEventListener('unhandledrejection', (event) => {
-    console.error('[jiuban] 未处理的 Promise 拒绝', event.reason);
+    console.error('[Memora] 未处理的 Promise 拒绝', event.reason);
   });
 }
 
 function init() {
+  initLiquidGlass();
+  initAdaptiveNavigation();
+  window.__MEMORA_READY__ = true;
   window.__JIUBAN_READY__ = true;
   const bootWarning = document.getElementById('boot-warning');
   if (bootWarning) bootWarning.hidden = true;
-  console.info('[久伴] v1.16.0 · 若点击无响应，请强制刷新 ⌘/Ctrl+Shift+R');
+  console.info(`[Memora] v${ASSET_VERSION} · 若点击无响应，请强制刷新 ⌘/Ctrl+Shift+R`);
   // 只保留浅色外观
   document.documentElement.dataset.theme = 'light';
   document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'light');
   initRouting();
-  initUserProfile(() => chatModule?.refreshChat?.());
+  const refreshProfile = () => {
+    const profile = getUserProfile();
+    const name = $('#sidebar-user-name');
+    const compact = $('.compact-profile-letter');
+    if (name) name.textContent = profile.name;
+    if (compact) compact.textContent = profile.name.slice(0, 1);
+    chatModule?.refreshChat?.();
+  };
+  initUserProfile(refreshProfile);
+  refreshProfile();
   initGlobalGuards();
   route(viewFromHash(), { force: true });
 }

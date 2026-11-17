@@ -1,6 +1,6 @@
 # AnnualReport 接入
 
-本目录将 [LC044/AnnualReport](https://github.com/LC044/AnnualReport) 的 `report-2024/single` 模板接入久伴「记忆中心 → 导入聊天记录」。上游版本固定为 `2a70d2ed221d6ce0c1c5a2b7543982a7edad703e`，保留其 MIT 授权和版权声明。
+本目录将 [LC044/AnnualReport](https://github.com/LC044/AnnualReport) 的 `report-2024/single` 模板接入Memora「记忆中心 → 导入聊天记录」。上游版本固定为 `2a70d2ed221d6ce0c1c5a2b7543982a7edad703e`，保留其 MIT 授权和版权声明。
 
 ## 使用
 

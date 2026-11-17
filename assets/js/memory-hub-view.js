@@ -1,10 +1,10 @@
 import { el, icon } from './util.js';
 
 const SECTIONS = {
-  overview: { label: '记忆与认知', href: '#memory', icon: 'database', path: './memory-view.js?v=1.16.0', mount: 'mountMemoryView' },
-  decision: { label: '决策复盘', href: '#memory/decision', path: './decision-view.js?v=1.16.0', mount: 'mountDecisionView' },
-  import: { label: '导入聊天记录', href: '#memory/import', icon: 'upload', path: './chat-import-view.js?v=1.16.0', mount: 'mountChatImportView' },
-  service: { label: '记忆库服务', href: '#memory/service', icon: 'settings', path: './memory-service-view.js?v=1.16.0', mount: 'mountMemoryServiceView' },
+  overview: { label: '记忆与认知', description: '保留重要的经历、偏好与计划，让每次对话自然延续。', href: '#memory', icon: 'database', path: './memory-view.js?v=1.17.0', mount: 'mountMemoryView' },
+  decision: { label: '决策复盘', description: '以记忆为依据，比较选择，再记录真实发生的结果。', href: '#memory/decision', path: './decision-view.js?v=1.17.0', mount: 'mountDecisionView' },
+  import: { label: '导入聊天记录', description: '选择记录来源，预览对话，再保存你希望记住的片段。', href: '#memory/import', icon: 'upload', path: './chat-import-view.js?v=1.17.0', mount: 'mountChatImportView' },
+  service: { label: '记忆库服务', description: '连接本机服务，管理检索、记忆确认与日记同步。', href: '#memory/service', icon: 'settings', path: './memory-service-view.js?v=1.17.0', mount: 'mountMemoryServiceView' },
 };
 
 export function mountMemoryHubView(container, { section = 'overview' } = {}) {
@@ -12,9 +12,13 @@ export function mountMemoryHubView(container, { section = 'overview' } = {}) {
   let activeSection = null;
   let disposed = false;
   const content = el('div', { class: 'memory-hub-content' });
+  const title = el('h1', { class: 'page-title', text: '记忆与认知' });
+  const subtitle = el('p', { class: 'page-sub' });
+  const headerActions = el('div', { class: 'memory-hub-actions' });
   const links = Object.entries(SECTIONS).filter(([key]) => key !== 'decision').map(([key, config]) => el('a', {
     class: 'memory-hub-link', href: config.href, dataset: { section: key },
-  }, [el('span', { class: 'memory-hub-icon', html: icon(config.icon, 16), 'aria-hidden': 'true' }), config.label]));
+    'aria-label': config.label,
+  }, [el('span', { class: 'memory-hub-icon', html: icon(config.icon, 16), 'aria-hidden': 'true' }), ({ overview: '记忆', import: '聊天导入', service: '服务连接' })[key]]));
   const cognitionLinks = ['overview', 'decision'].map((key) => el('a', {
     class: 'memory-cognition-link', href: SECTIONS[key].href, dataset: { section: key },
     text: key === 'overview' ? '记忆管理' : '决策复盘',
@@ -23,11 +27,10 @@ export function mountMemoryHubView(container, { section = 'overview' } = {}) {
 
   container.replaceChildren(el('div', { class: 'memory-hub' }, [
     el('header', { class: 'memory-hub-header' }, [
-      el('h1', { class: 'page-title', text: '记忆中心' }),
-      el('p', { class: 'page-sub', text: '管理长期记忆、整理对话证据，连接记忆库服务。' }),
-      el('nav', { class: 'memory-hub-nav', 'aria-label': '记忆中心二级菜单' }, links),
+      el('span', { class: 'section-eyebrow', text: '记忆中心' }),
+      el('div', { class: 'memory-hub-heading' }, [title, headerActions]), subtitle,
+      el('div', { class: 'memory-hub-controls' }, [el('nav', { class: 'memory-hub-nav', 'aria-label': '记忆中心二级菜单' }, links), cognitionNav]),
     ]),
-    cognitionNav,
     content,
   ]));
 
@@ -42,9 +45,19 @@ export function mountMemoryHubView(container, { section = 'overview' } = {}) {
         entry.cleanup?.();
         return;
       }
-      // The hub owns the page heading; each nested page has a section heading.
-      const heading = entry.node.querySelector('.page-header h1');
-      if (heading) heading.replaceWith(el('h2', { class: heading.className, text: heading.textContent }));
+      // 标题由中心统一呈现；子页面只保留开关、状态和连接等实际操作。
+      const header = entry.node.querySelector('.page-header');
+      const heading = header?.querySelector('h1');
+      if (heading) {
+        const copy = heading.parentElement === header ? heading : heading.parentElement;
+        copy.remove();
+        header.classList.add('hub-section-toolbar');
+        if (key !== 'service') {
+          entry.actions = [...header.children];
+          if (activeSection === key) headerActions.replaceChildren(...entry.actions);
+          header.remove();
+        } else if (!header.children.length) header.hidden = true;
+      }
       entry.node.removeAttribute('aria-busy');
     } catch (error) {
       if (disposed || entry.disposed) return;
@@ -73,9 +86,11 @@ export function mountMemoryHubView(container, { section = 'overview' } = {}) {
     if (disposed) return;
     const key = Object.hasOwn(SECTIONS, next) ? next : 'overview';
     if (activeSection === key) return;
-    // Refresh memory after imports or confirmed reviews; retain the review form and results.
-    if (activeSection === 'overview') removePanel('overview');
+    // 保留输入状态；重新进入记忆列表时刷新实际保存的数据。
     activeSection = key;
+    title.textContent = SECTIONS[key].label;
+    subtitle.textContent = SECTIONS[key].description;
+    headerActions.replaceChildren(...(panels.get(key)?.actions || []));
     const cognitionActive = key === 'overview' || key === 'decision';
     cognitionNav.hidden = !cognitionActive;
     links.forEach((link) => {
@@ -96,6 +111,8 @@ export function mountMemoryHubView(container, { section = 'overview' } = {}) {
       panels.set(key, entry);
       content.append(entry.node);
       loadPanel(key, entry);
+    } else if (key === 'overview') {
+      panels.get(key).cleanup?.refresh?.().catch(error => console.warn('[Memora] 刷新记忆失败', error));
     }
   }
 
@@ -105,5 +122,6 @@ export function mountMemoryHubView(container, { section = 'overview' } = {}) {
     for (const key of [...panels.keys()]) removePanel(key);
   };
   cleanup.setSection = setSection;
+  cleanup.refresh = async () => { await panels.get(activeSection)?.cleanup?.refresh?.(); };
   return cleanup;
 }

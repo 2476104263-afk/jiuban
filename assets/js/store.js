@@ -3,12 +3,15 @@
    会话 / 消息 / 设置，全部保存在 localStorage
    ========================================================================== */
 
-import { createSeedConversations } from './data.js';
+import { createSeedConversations, getPersona, PRIMARY_PERSONA_ID } from './data.js';
 import { uid } from './util.js';
 
 export const STORAGE_KEY = 'jiuban.state.v1';
 export const LEGACY_STORAGE_KEY = 'qchat.state.v1'; // 旧品牌 QChat 的数据，读取后自动迁移
-export const STATE_VERSION = 2; // v2：产品改为单一好友「久伴」
+export const STATE_VERSION = 2; // v2：产品改为单一好友「Memora」
+
+// 仅用于识别旧版本内置名称；数据键、会话 ID 和记忆范围继续兼容。
+const LEGACY_COMPANION_NAME = '\u4e45\u4f34';
 
 export const DEFAULT_SETTINGS = {
   apiKey: '',
@@ -69,6 +72,12 @@ function normalizeSettings(raw) {
 function normalizeConversation(conv) {
   if (!conv || typeof conv !== 'object' || !conv.id) return null;
   const fallbackAvatar = { emoji: '🤖', from: '#5ac8fa', to: '#007aff' };
+  // Memora的项目头像随品牌资源更新，兼容已保存的旧头像，不重建会话。
+  const isCompanion = conv.personaId === PRIMARY_PERSONA_ID || conv.id === 'conv_jiuban';
+  const persona = getPersona(PRIMARY_PERSONA_ID);
+  const avatar = isCompanion
+    ? { ...persona.avatar }
+    : conv.avatar && conv.avatar.emoji ? conv.avatar : fallbackAvatar;
   const messages = Array.isArray(conv.messages)
     ? conv.messages
         .filter((m) => m && m.role && typeof m.content === 'string')
@@ -78,6 +87,10 @@ function normalizeConversation(conv) {
             id: m.id || uid('msg'),
             createdAt: m.createdAt || Date.now(),
           };
+          // 只更新内置欢迎语中的品牌，用户的聊天内容和历史回复保持原样。
+          if (isCompanion && message.id === 'msg_welcome_jiuban' && message.role === 'assistant') {
+            message.content = message.content.replaceAll(LEGACY_COMPANION_NAME, persona.name);
+          }
           // 页面刷新 / 崩溃时，清掉永远停在 streaming 的占位消息
           if (message.status === 'streaming') {
             message.status = 'done';
@@ -89,12 +102,16 @@ function normalizeConversation(conv) {
     : [];
   return {
     id: String(conv.id),
-    name: conv.name || '久伴',
+    name: isCompanion && conv.name === LEGACY_COMPANION_NAME ? persona.name : conv.name || persona.name,
     kind: conv.kind === 'group' ? 'group' : 'friend',
     personaId: conv.personaId || null,
-    avatar: conv.avatar && conv.avatar.emoji ? conv.avatar : fallbackAvatar,
+    avatar,
     members: Array.isArray(conv.members) ? conv.members : [],
-    systemPrompt: typeof conv.systemPrompt === 'string' ? conv.systemPrompt : '',
+    systemPrompt: typeof conv.systemPrompt === 'string'
+      ? isCompanion
+        ? conv.systemPrompt.replaceAll(LEGACY_COMPANION_NAME, persona.name).replace('你的名字来自“长久陪伴”，', '你通过长期记忆理解用户，')
+        : conv.systemPrompt
+      : '',
     pinned: Boolean(conv.pinned),
     unread: Number(conv.unread) || 0,
     createdAt: conv.createdAt || Date.now(),
@@ -126,7 +143,7 @@ function loadState() {
 
   const settings = normalizeSettings(parsed.settings);
 
-  // v2 迁移：旧版本有多个 AI 好友/群聊，现在改为只有「久伴」一个会话；
+  // v2 迁移：旧版本有多个 AI 好友/群聊，现在改为只有「Memora」一个会话；
   // 保留用户设置（含 DeepSeek API Key、模型参数、主题等），会话数据重置为默认。
   const storedVersion = Number(parsed.version) || 1;
   if (storedVersion < 2) {
@@ -207,7 +224,7 @@ export function emit(event, payload) {
       try {
         fn(payload, event);
       } catch (err) {
-        console.error(`[jiuban] 事件处理器出错 (${event})`, err);
+        console.error(`[Memora] 事件处理器出错 (${event})`, err);
       }
     }
   }
@@ -217,7 +234,7 @@ export function emit(event, payload) {
       try {
         fn(event, payload);
       } catch (err) {
-        console.error('[jiuban] 通配事件处理器出错', err);
+        console.error('[Memora] 通配事件处理器出错', err);
       }
     }
   }

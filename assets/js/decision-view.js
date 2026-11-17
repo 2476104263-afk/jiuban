@@ -1,5 +1,5 @@
 import { streamCompletion } from './api.js';
-import { addManualMemory, COMPANION_MEMORY_SCOPE, reviseMemory, searchMemories } from './memory.js?v=1.16.0';
+import { addManualMemory, COMPANION_MEMORY_SCOPE, reviseMemory, searchMemories } from './memory.js?v=1.17.0';
 import { store } from './store.js';
 import { getUserProfile } from './user-profile.js';
 import { el, toast, confirmDialog } from './util.js';

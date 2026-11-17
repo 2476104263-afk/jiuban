@@ -545,6 +545,7 @@ export function mountPeopleView(container, { section = 'overview' } = {}) {
   render();
   const cleanup = () => { disposed = true; };
   cleanup.setSection = (next) => {
+    if (currentSection === next) return;
     currentSection = next;
     render();
   };

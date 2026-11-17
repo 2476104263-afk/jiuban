@@ -1131,11 +1131,6 @@
     padding-right: 16px;
   }
 
-  #chat-export-btn,
-  #chat-clear-btn {
-    display: none;
-  }
-
   .api-chip {
     width: 26px;
     padding: 0;
@@ -1179,10 +1174,6 @@
 
   .chat-head-actions {
     gap: 0;
-  }
-
-  #chat-clear-btn {
-    display: none;
   }
 
   .msg-body {

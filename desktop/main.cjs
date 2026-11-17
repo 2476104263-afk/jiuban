@@ -1,6 +1,17 @@
 const { app, BrowserWindow, protocol, shell } = require('electron');
 const fs = require('node:fs/promises');
+const { existsSync } = require('node:fs');
 const path = require('node:path');
+
+app.setName('Memora');
+// 更名后继续使用已有安装的数据目录与页面来源，保留本机聊天和记忆。
+for (const name of ['\u4e45\u4f34', 'jiuban']) {
+  const directory = path.join(app.getPath('appData'), name);
+  if (existsSync(directory)) {
+    app.setPath('userData', directory);
+    break;
+  }
+}
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'jiuban', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -48,7 +59,7 @@ async function createWindow() {
     height: 940,
     minWidth: 900,
     minHeight: 640,
-    title: '久伴 · 在线聊天',
+    title: 'Memora · 在线聊天',
     backgroundColor: '#eef1f6',
     show: false,
     webPreferences: {

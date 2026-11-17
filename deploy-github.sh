@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 久伴 · 一键推送到 GitHub（之后 GitHub Pages 会自动更新）
+# Memora · 一键推送到 GitHub（之后 GitHub Pages 会自动更新）
 #
 # 第一次使用：
 #   1. 在 GitHub 新建一个 Public 仓库（不要勾选初始化 README）

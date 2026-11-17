@@ -59,7 +59,7 @@
                 </div>
                 <div class="copyright">
                     
-                    <span>久伴 · AnnualReport / LC044</span>
+                    <span>Memora · AnnualReport / LC044</span>
                 </div>
                 <!-- <div class="url">
                     <a :href="wechatReportData.websiteUrl" target="_blank">{{ wechatReportData.websiteUrlText }}</a>

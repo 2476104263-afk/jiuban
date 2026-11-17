@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 久伴 本地静态服务器（零依赖）
+ * Memora 本地静态服务器（零依赖）
  *
  * 用法：
  *   node serve.mjs                    # 默认局域网可访问，端口 5188
@@ -9,7 +9,7 @@
  *
  * 默认监听 0.0.0.0，同一 Wi-Fi 下的其他设备可通过「局域网地址」访问。
  *
- * 说明：久伴 使用原生 ES Modules，浏览器出于 CORS 限制不能直接以
+ * 说明：Memora 使用原生 ES Modules，浏览器出于 CORS 限制不能直接以
  * file:// 方式打开 index.html，所以需要这个极简静态服务器。
  */
 
@@ -133,7 +133,7 @@ function getLanAddresses() {
 server.listen(PORT, HOST, () => {
   const lanAddresses = HOST === '0.0.0.0' || HOST === '::' ? getLanAddresses() : [];
   console.log('');
-  console.log('  久伴 已启动 🚀');
+  console.log('  Memora 已启动 🚀');
   console.log(`  本机访问: http://127.0.0.1:${PORT}`);
   if (lanAddresses.length) {
     for (const item of lanAddresses) {

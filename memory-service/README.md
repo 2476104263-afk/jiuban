@@ -134,7 +134,7 @@ curl -s -X POST http://127.0.0.1:5189/api/memories/search \
 
 ### 4.1 网页端内置页面（已接入）
 
-久伴网页端通过「记忆中心 → 记忆库服务」入口（`assets/js/memory-service-view.js`）：可连接服务、
+Memora网页端通过「记忆中心 → 记忆库服务」入口（`assets/js/memory-service-view.js`）：可连接服务、
 写入/确认/删除记忆、认证检索并查看 trace、同步本地日记、运行 8 项浏览器自动测试。
 启动网页端（`node serve.mjs` → 5188）和记忆库服务（`node memory-service/server.mjs` → 5189）后，
 打开 <http://127.0.0.1:5188/#memory/service> 即可使用。

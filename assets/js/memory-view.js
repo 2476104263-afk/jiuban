@@ -1,8 +1,8 @@
 import {
   addManualMemory, clearMemories, COMPANION_MEMORY_SCOPE, confirmMemory, deleteMemory, exportMemorySnapshot, getMemoryStorageStats,
   importMemorySnapshot, listMemories, memoryEnabled, rebuildMemoryIndex, setMemoryEnabled,
-} from './memory.js?v=1.16.0';
-import { createMemoryCloud } from './memory-cloud.js?v=1.16.0';
+} from './memory.js?v=1.17.0';
+import { createMemoryCloud } from './memory-cloud.js?v=1.17.0';
 import { el, toast, confirmDialog, download } from './util.js';
 
 const KINDS = { episode: '经历', fact: '事实', preference: '偏好', relation: '关系', goal: '计划', reflection: '认知' };
@@ -10,9 +10,9 @@ const KINDS = { episode: '经历', fact: '事实', preference: '偏好', relatio
 export async function mountMemoryView(container) {
   const convId = COMPANION_MEMORY_SCOPE;
   const memories = el('div', { class: 'memory-list' });
-  const search = el('input', { class: 'input memory-search', placeholder: '搜索记忆…' });
-  const formInput = el('textarea', { class: 'memory-compose-input', rows: 2, placeholder: '例如：我喜欢先看结论，再看详细解释。' });
-  const kind = el('select', { class: 'input memory-kind' }, Object.entries(KINDS).map(([value, label]) => el('option', { value, text: label })));
+  const search = el('input', { class: 'input memory-search', type: 'search', placeholder: '搜索记忆…', 'aria-label': '搜索长期记忆' });
+  const formInput = el('textarea', { class: 'memory-compose-input', rows: 2, placeholder: '例如：我喜欢先看结论，再看详细解释。', 'aria-label': '记忆内容' });
+  const kind = el('select', { class: 'input memory-kind', 'aria-label': '记忆类型' }, Object.entries(KINDS).map(([value, label]) => el('option', { value, text: label })));
   const enabled = el('button', { class: 'memory-toggle', type: 'button', role: 'switch' });
   const countBadge = el('span', { class: 'memory-count', text: '0' });
   const rows = await listMemories(convId);
@@ -36,12 +36,15 @@ export async function mountMemoryView(container) {
   function renderList() {
     memoryCloud.update(rows, search.value);
     const isCurrent = (item) => item.status === 'active' && (!item.validFrom || Number(item.validFrom) <= Date.now()) && (!item.validUntil || Number(item.validUntil) > Date.now());
-    countBadge.textContent = String(rows.filter(isCurrent).length);
+    countBadge.textContent = `${rows.filter(isCurrent).length} 条`;
     memories.replaceChildren();
     const query = search.value.trim().toLowerCase();
     const visible = rows.filter((row) => !query || `${row.content} ${(row.tags || []).join(' ')}`.toLowerCase().includes(query));
     if (!visible.length) {
-      memories.append(el('div', { class: 'memory-empty', text: query ? '没有找到匹配的记忆' : '还没有记忆。聊天中说“记住：……”可保存，也可以在下方手动添加。' }));
+      memories.append(el('div', { class: 'memory-empty' }, [
+        el('strong', { text: query ? '没有找到匹配的记忆' : '让重要的事情留下来' }),
+        el('p', { text: query ? '换一个关键词试试。' : '在对话中说“记住：……”，或从这里添加一条记忆。' }),
+      ]));
       return;
     }
     for (const row of visible) {
@@ -86,7 +89,9 @@ export async function mountMemoryView(container) {
   function renderEnabled() {
     enabled.classList.toggle('is-on', memoryEnabled());
     enabled.setAttribute('aria-checked', memoryEnabled() ? 'true' : 'false');
-    enabled.textContent = memoryEnabled() ? '已开启' : '已暂停';
+    enabled.textContent = '长期记忆';
+    enabled.title = memoryEnabled() ? '暂停长期记忆' : '开启长期记忆';
+    enabled.setAttribute('aria-label', '长期记忆');
   }
 
   const storageCard = el('section', { class: 'card memory-card memory-storage-card' }, [
@@ -104,9 +109,10 @@ export async function mountMemoryView(container) {
       const row = await addManualMemory(convId, { content: formInput.value, kind: kind.value, basis: 'explicit', confidence: 1, triggerType: 'manual_entry', source: 'user-manual-entry' });
       rows.unshift(row);
       formInput.value = '';
+      composeDisclosure.open = false;
       renderList();
       await renderStorageStats();
-      toast('已保存到久伴的本地记忆', 'success', 1600);
+      toast('已保存到Memora的本地记忆', 'success', 1600);
     } catch (error) { toast(error.message, 'warning'); }
   } }, [formInput, el('div', { class: 'memory-compose-controls' }, [kind, el('button', { class: 'btn btn-primary', type: 'submit', text: '保存记忆' })])]);
 
@@ -125,9 +131,9 @@ export async function mountMemoryView(container) {
     } catch (error) { toast(`导入失败：${error.message}`, 'error'); }
   });
 
-  const clearButton = el('button', { class: 'btn btn-danger', type: 'button', text: '清空久伴记忆', onClick: async () => {
+  const clearButton = el('button', { class: 'btn btn-danger', type: 'button', text: '清空Memora记忆', onClick: async () => {
     if (!rows.length) return;
-    const yes = await confirmDialog({ title: '清空久伴的长期记忆', message: '将删除久伴一对一聊天共用的所有本地记忆，且无法撤销。', confirmText: '清空', danger: true });
+    const yes = await confirmDialog({ title: '清空Memora的长期记忆', message: '将删除Memora一对一聊天共用的所有本地记忆，且无法撤销。', confirmText: '清空', danger: true });
     if (!yes) return;
     await clearMemories(convId);
     rows.splice(0);
@@ -135,13 +141,22 @@ export async function mountMemoryView(container) {
     await renderStorageStats();
   } });
 
-  const longTermCard = el('section', { class: 'card memory-card memory-long-term-card' }, [
-    el('div', { class: 'memory-card-heading' }, [el('div', {}, [el('h2', { text: '长期记忆' }), el('p', { text: '跨一对一聊天共享；按经历、事实、偏好、关系、计划分类，并按当前话题召回。' })]), countBadge]),
+  const composeDisclosure = el('details', { class: 'memory-compose-disclosure' }, [
+    el('summary', { class: 'btn btn-primary', text: '+ 新增记忆' }),
     form,
+  ]);
+  composeDisclosure.addEventListener('toggle', () => { if (composeDisclosure.open) formInput.focus(); });
+  const manageMenu = el('details', { class: 'action-menu memory-manage-menu' }, [
+    el('summary', { class: 'btn btn-ghost', text: '管理记忆' }),
+    el('div', { class: 'action-menu-panel' }, [importButton,
+      el('button', { class: 'btn btn-ghost', type: 'button', text: '导出 JSON', onClick: async () => download('memora-memories.json', await exportMemorySnapshot(convId), 'application/json') }), clearButton,
+    ]),
+  ]);
+  const longTermCard = el('section', { class: 'card memory-card memory-long-term-card' }, [
+    el('div', { class: 'memory-card-heading' }, [el('div', {}, [el('h2', { text: '长期记忆' }), el('p', { text: '可查看来源，也能随时确认、补充或删除。' })]), countBadge]),
+    composeDisclosure,
     el('div', { class: 'memory-list-toolbar' }, [search, el('div', { class: 'memory-toolbar-actions' }, [
-      importButton,
-      el('button', { class: 'btn btn-ghost', type: 'button', text: '导出 JSON', onClick: async () => download('jiuban-memories.json', await exportMemorySnapshot(convId), 'application/json') }),
-      clearButton,
+      manageMenu,
     ])]),
     memories,
   ]);
@@ -156,15 +171,26 @@ export async function mountMemoryView(container) {
   container.replaceChildren(
     el('div', { class: 'page memory-page' }, [
       el('header', { class: 'page-header memory-page-header' }, [
-        el('div', {}, [el('h1', { class: 'page-title', text: '记忆与认知' }), el('p', { class: 'page-sub', text: '久伴的一对一聊天共用这份长期记忆，数据保存在本机浏览器。' })]), enabled,
+        el('div', {}, [el('h1', { class: 'page-title', text: '记忆与认知' }), el('p', { class: 'page-sub', text: 'Memora的一对一聊天共用这份长期记忆，数据保存在本机浏览器。' })]), enabled,
       ]),
-      el('div', { class: 'memory-primary-grid' }, [memoryCloud.element, storageCard]),
       el('div', { class: 'memory-secondary-grid' }, [longTermCard]),
+      el('details', { class: 'memory-insights' }, [
+        el('summary', {}, [el('span', { text: '记忆概览' }), el('small', { text: '点阵云图与存储状态' })]),
+        el('div', { class: 'memory-primary-grid' }, [memoryCloud.element, storageCard]),
+      ]),
     ]),
     importInput,
   );
   renderEnabled();
   renderList();
   await renderStorageStats();
-  return () => { importInput.remove(); memoryCloud.dispose(); };
+  const cleanup = () => { importInput.remove(); memoryCloud.dispose(); };
+  cleanup.refresh = async () => {
+    const latest = await listMemories(convId);
+    rows.splice(0, rows.length, ...latest);
+    renderEnabled();
+    renderList();
+    await renderStorageStats();
+  };
+  return cleanup;
 }

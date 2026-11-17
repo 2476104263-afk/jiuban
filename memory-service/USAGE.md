@@ -106,7 +106,7 @@ curl -s -X POST http://127.0.0.1:5189/api/decision/branches \
 
 ---
 
-## 三、接入现有网页端（久伴 / Memora 前端）
+## 三、接入现有网页端（Memora 前端）
 
 服务已开 CORS，网页端（如 `http://127.0.0.1:5188`）可以直接跨端口调用。
 

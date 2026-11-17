@@ -1,8 +1,8 @@
 /* ==========================================================================
-   久伴 · 记忆库服务（AURORA-CAIR 记忆库）图形界面
+   Memora · 记忆库服务（AURORA-CAIR 记忆库）图形界面
    连接 memory-service/server.mjs；提供记忆操作、日记同步、自动测试与说明。
    ========================================================================== */
-import { listJournals } from './memory.js?v=1.16.0';
+import { listJournals } from './memory.js?v=1.17.0';
 import {
   DEFAULT_MEMORY_SERVICE_URL,
   MemoryServiceClient,
@@ -211,7 +211,7 @@ export async function mountMemoryServiceView(container) {
           <div class="msvc-grid">
             <section class="card msvc-card">
               <h2>这个页面做什么？</h2>
-              <p class="msvc-hint">把 <code>memory-service/</code> 的 AURORA-CAIR 记忆库接入久伴网页端：写入候选记忆、确认/修正、认证 Top-K 检索、日记同步，并提供可重复的浏览器内自动测试。</p>
+              <p class="msvc-hint">把 <code>memory-service/</code> 的 AURORA-CAIR 记忆库接入Memora网页端：写入候选记忆、确认/修正、认证 Top-K 检索、日记同步，并提供可重复的浏览器内自动测试。</p>
               <ul class="msvc-about-list">
                 <li><b>可靠区间：</b>4/8/16-bit 前缀量化 + 区间算术，语义分数有严格上下界。</li>
                 <li><b>精确认证：</b>Top-K 成员下界高于外部上界时认证，结果与全量精排一致。</li>

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   jiuban · 简化的 DeepSeek API Key 小窗口
+   Memora · 简化的 DeepSeek API Key 小窗口
    面向第一次使用 AI 的用户：粘贴 Key → 点刷新测试 → 保存
    ========================================================================== */
 
@@ -114,7 +114,7 @@ export function openApiKeyDialog({ onSaved } = {}) {
   const dialogBody = el('div', { class: 'api-key-dialog' }, [
     el('p', {
       class: 'api-key-intro',
-      text: '把 DeepSeek 的 API Key 粘贴进来，久伴就能用真实大模型陪你聊天了。点「保存并连接」会自动帮你检查 Key 是否可用。',
+      text: '把 DeepSeek 的 API Key 粘贴进来，Memora就能用真实大模型陪你聊天了。点「保存并连接」会自动帮你检查 Key 是否可用。',
     }),
     el('div', { class: 'field api-key-field' }, [
       el('label', { class: 'label', for: 'api-key-input' }, [
@@ -253,7 +253,7 @@ export function openApiKeyDialog({ onSaved } = {}) {
     const model = modelInput.value.trim() || 'deepseek-flash';
     store.updateSettings({ apiKey, baseUrl, model });
     dialog.close();
-    toast('连接成功，开始和久伴聊天吧 🎉', 'success', 2600);
+    toast('连接成功，开始和Memora聊天吧 🎉', 'success', 2600);
     if (typeof onSaved === 'function') onSaved();
   }
 

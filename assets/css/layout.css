@@ -92,19 +92,12 @@
   position: relative;
 }
 
-.rail-ai-badge {
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  padding: 0 3px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #0b70e6;
-  font-size: 7px;
-  font-weight: 800;
-  line-height: 11px;
-  letter-spacing: 0.2px;
-  box-shadow: 0 1px 3px rgba(0, 40, 90, 0.25);
+.rail-project-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 24%;
+  object-fit: contain;
 }
 
 .rail-avatar {
@@ -376,6 +369,19 @@
 .avatar.has-image {
   background-color: transparent;
   box-shadow: 0 3px 10px rgba(53, 96, 200, 0.24);
+}
+
+.avatar.is-project-icon {
+  border-radius: 24%;
+  background-color: #edf0f5;
+  box-shadow: 0 2px 6px rgba(33, 40, 54, 0.14);
+}
+
+.avatar.is-project-icon img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
 }
 
 .conv-avatar-wrap .online-dot {

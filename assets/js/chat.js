@@ -4,10 +4,10 @@
    ========================================================================== */
 
 import { store, subscribe } from './store.js';
-import { getGroupMembers, getPersona } from './data.js';
-import { getUserProfile } from './user-profile.js?v=1.16.0';
-import { languageStylePrompt } from './language-style.js?v=1.16.0';
-import { addManualMemory, COMPANION_MEMORY_SCOPE, getCognitionState, getCheckpoint, memoryEnabled, memoryPrompt, rememberExplicitMessage, retrieveMemories, saveMemoryCandidates, setCheckpoint } from './memory.js?v=1.16.0';
+import { getGroupMembers, getPersona, PROJECT_ICON } from './data.js';
+import { getUserProfile } from './user-profile.js?v=1.17.0';
+import { languageStylePrompt } from './language-style.js?v=1.17.0';
+import { addManualMemory, COMPANION_MEMORY_SCOPE, getCognitionState, getCheckpoint, memoryEnabled, memoryPrompt, rememberExplicitMessage, retrieveMemories, saveMemoryCandidates, setCheckpoint } from './memory.js?v=1.17.0';
 import {
   $,
   $$,
@@ -30,7 +30,7 @@ import {
 } from './util.js';
 
 const ME_AVATAR = { emoji: '🙂', from: '#a9d0ff', to: '#4f93ff' };
-const TITLE_BASE = '久伴 · 在线聊天';
+const TITLE_BASE = 'Memora · 在线聊天';
 const MEMORY_TOOLS = [
   { type: 'function', function: { name: 'jiuban_remember', description: '保存用户明确要求记住，或稳定且有长期帮助价值的偏好、事实、计划、经历。必须引用用户原话作为证据；不要保存敏感信息。', parameters: { type: 'object', properties: { content: { type: 'string', description: '简短、可核验的记忆内容' }, kind: { type: 'string', enum: ['episode', 'fact', 'preference', 'relation', 'goal', 'reflection'] }, tags: { type: 'array', items: { type: 'string' } }, importance: { type: 'number', minimum: 0, maximum: 1 }, evidenceQuote: { type: 'string', description: '逐字引用用户原话，供本地验证' } }, required: ['content', 'evidenceQuote'] } } },
   { type: 'function', function: { name: 'jiuban_recall', description: '主动搜索与当前问题有关的长期记忆，特别适用于用户问以前说过什么、当前指代不清或需要连续跟进计划时。', parameters: { type: 'object', properties: { query: { type: 'string', description: '简短关键词或主题' } }, required: ['query'] } } },
@@ -233,7 +233,7 @@ function updateStatus() {
 function updateComposerHint() {
   if (!dom.composerHint) return;
   const parts = [];
-  if (streaming) parts.push('久伴正在回复…');
+  if (streaming) parts.push('Memora正在回复…');
   else parts.push(hasApiKey() ? '已连接 DeepSeek' : '本地演示模式');
   if (pendingImage) parts.push('已附带图片');
   parts.push(store.settings.enterToSend ? 'Enter 发送' : 'Ctrl/⌘+Enter 发送');
@@ -245,10 +245,10 @@ function updateComposerHint() {
 
 async function openApiKeyDialog() {
   try {
-    const mod = await import('./api-key-dialog.js?v=1.16.0');
+    const mod = await import('./api-key-dialog.js?v=1.17.0');
     if (typeof mod.openApiKeyDialog === 'function') mod.openApiKeyDialog();
   } catch (err) {
-    console.error('[jiuban] 打开连接窗口失败', err);
+    console.error('[Memora] 打开连接窗口失败', err);
     toast('连接窗口加载失败，请刷新页面重试', 'error');
   }
 }
@@ -260,7 +260,7 @@ function buildDemoBanner() {
     el('span', { class: 'demo-banner-icon', text: '💡' }),
     el('div', { class: 'demo-banner-text' }, [
       el('b', { text: '还没连接 DeepSeek' }),
-      el('span', { text: ' · 现在由本地模拟回复，连接后久伴会更聪明。' }),
+      el('span', { text: ' · 现在由本地模拟回复，连接后Memora会更聪明。' }),
     ]),
     el(
       'button',
@@ -290,6 +290,7 @@ function avatarEl(avatar, extraClass = '') {
 
 function paintAvatar(node, avatar) {
   const data = avatar || ME_AVATAR;
+  node.classList.toggle('is-project-icon', data.img === PROJECT_ICON);
   node.style.setProperty('--av-from', data.from || '#5ac8fa');
   node.style.setProperty('--av-to', data.to || '#007aff');
   if (data.img) {
@@ -594,8 +595,8 @@ function updateSendDisabled() {
 function setSendingState(sending) {
   dom.chatAvatar?.classList.toggle('is-thinking', sending);
   if (dom.chatAvatar) {
-    dom.chatAvatar.setAttribute('aria-label', sending ? '久伴正在思考' : '久伴');
-    dom.chatAvatar.title = sending ? '正在思考…' : '久伴';
+    dom.chatAvatar.setAttribute('aria-label', sending ? 'Memora正在思考' : 'Memora');
+    dom.chatAvatar.title = sending ? '正在思考…' : 'Memora';
   }
   if (!dom.sendBtn) return;
   if (sending) {
@@ -743,7 +744,7 @@ async function handleSend() {
 
   const userMessage = store.appendMessage(conv.id, message);
   if (conv.kind !== 'group') {
-    try { await rememberExplicitMessage(COMPANION_MEMORY_SCOPE, userMessage); } catch (error) { console.warn('[jiuban] 保存明确记忆失败', error); }
+    try { await rememberExplicitMessage(COMPANION_MEMORY_SCOPE, userMessage); } catch (error) { console.warn('[Memora] 保存明确记忆失败', error); }
   }
   dom.input.value = '';
   pendingImage = null;
@@ -790,7 +791,7 @@ async function startReply(convId) {
         else await replyDemo(conv, member, controller.signal);
       } catch (err) {
         if (err?.name === 'AbortError' || err?.code === 'aborted' || controller.signal.aborted) break;
-        console.error('[jiuban] 生成回复失败', err);
+        console.error('[Memora] 生成回复失败', err);
         toast(err?.message ? `${err.message}` : '生成回复失败，请稍后重试', 'error');
         break;
       }
@@ -814,10 +815,10 @@ async function startReply(convId) {
 async function ensureApi() {
   if (apiApi) return true;
   try {
-    apiApi = await import('./api.js?v=1.16.0');
+    apiApi = await import('./api.js?v=1.17.0');
     return typeof apiApi.streamCompletion === 'function';
   } catch (err) {
-    console.warn('[jiuban] api.js 加载失败', err);
+    console.warn('[Memora] api.js 加载失败', err);
     return false;
   }
 }
@@ -839,7 +840,7 @@ async function buildApiMessages(conv, member) {
     const latestUserText = [...conv.messages].reverse().find((msg) => msg.role === 'user')?.content || '';
     let recalled = [];
     try { recalled = await retrieveMemories(COMPANION_MEMORY_SCOPE, latestUserText, 5); }
-    catch (error) { console.warn('[jiuban] 本地记忆检索失败，继续普通对话', error); }
+    catch (error) { console.warn('[Memora] 本地记忆检索失败，继续普通对话', error); }
     const axes = getCognitionState();
     const context = memoryPrompt(recalled);
     const style = `表达状态参考：温暖${Math.round(axes.warmth * 100)}%、谨慎${Math.round(axes.caution * 100)}%、好奇${Math.round(axes.curiosity * 100)}%、活跃${Math.round(axes.energy * 100)}%。只轻微影响语气，不要声称拥有人类情绪。`;
@@ -1006,7 +1007,7 @@ async function replyWithApi(conv, member, signal) {
     if (memoryEnabled() && conv.kind !== 'group' && !memoryExtractionInFlight.has(COMPANION_MEMORY_SCOPE)) {
       memoryExtractionInFlight.add(COMPANION_MEMORY_SCOPE);
       void consolidateConversationMemory(conv.id).catch((err) => {
-        console.warn('[jiuban] 长期记忆整理失败', err);
+        console.warn('[Memora] 长期记忆整理失败', err);
       }).finally(() => memoryExtractionInFlight.delete(COMPANION_MEMORY_SCOPE));
     }
   } catch (err) {
@@ -1317,7 +1318,7 @@ function exportConversation() {
     toast('当前会话还没有消息可以导出', 'info');
     return;
   }
-  const lines = [`# ${conv.name} · 久伴 聊天记录`, '', `导出时间：${formatDate(Date.now())}`, ''];
+  const lines = [`# ${conv.name} · Memora 聊天记录`, '', `导出时间：${formatDate(Date.now())}`, ''];
   for (const msg of conv.messages) {
     const sender = senderFor(conv, msg);
     lines.push(`## ${sender.name} · ${formatDate(msg.createdAt)}`, '');
@@ -1329,7 +1330,7 @@ function exportConversation() {
     lines.push('');
   }
   const safeName = conv.name.replace(/[\\/:*?"<>|\s]+/g, '_');
-  download(`久伴-${safeName}-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown');
+  download(`Memora-${safeName}-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown');
   toast('聊天记录已导出为 Markdown', 'success');
 }
 
@@ -1377,7 +1378,7 @@ function delay(ms, signal) {
 }
 
 /* 供 QA / 调试使用 */
-window.__JIUBAN__ = {
+window.__MEMORA__ = {
   store,
   send: async (text) => {
     if (!dom.input) return;
@@ -1402,4 +1403,5 @@ window.__JIUBAN__ = {
 };
 
 // 兼容旧调试名（内部测试脚本使用）
-window.__QCHAT__ = window.__JIUBAN__;
+window.__JIUBAN__ = window.__MEMORA__;
+window.__QCHAT__ = window.__MEMORA__;
